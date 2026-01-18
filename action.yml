@@ -1,0 +1,105 @@
+name: 'ADR Buddy'
+description: 'Validate and sync Architecture Decision Records from code annotations'
+author: 'weaby'
+branding:
+  icon: 'book-open'
+  color: 'blue'
+
+inputs:
+  mode:
+    description: 'Operation mode: validate or sync'
+    required: true
+  version:
+    description: 'ADR Buddy version to use'
+    required: false
+    default: 'latest'
+  config-path:
+    description: 'Path to .adr-buddy/config.yml'
+    required: false
+    default: '.adr-buddy/config.yml'
+  strict:
+    description: 'Enable strict validation mode'
+    required: false
+    default: 'true'
+  create-pr:
+    description: 'Create PR with changes (sync mode only)'
+    required: false
+    default: 'true'
+  reviewers:
+    description: 'Comma-separated GitHub usernames to request reviews'
+    required: false
+    default: ''
+  token:
+    description: 'GitHub token for API operations'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  validation-status:
+    description: 'Validation result: pass, fail, or warning'
+    value: ${{ steps.set-outputs.outputs.validation-status }}
+  changes-detected:
+    description: 'Whether ADR changes were detected'
+    value: ${{ steps.set-outputs.outputs.changes-detected }}
+  pr-number:
+    description: 'PR number if created'
+    value: ${{ steps.set-outputs.outputs.pr-number }}
+  pr-url:
+    description: 'PR URL if created'
+    value: ${{ steps.set-outputs.outputs.pr-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install ADR Buddy
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          go install github.com/weaby/adr-buddy/cmd/adr-buddy@latest
+        else
+          go install github.com/weaby/adr-buddy/cmd/adr-buddy@${{ inputs.version }}
+        fi
+
+    - name: Run Validate Mode
+      if: inputs.mode == 'validate'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        STRICT_FLAG=""
+        [ "${{ inputs.strict }}" = "true" ] && STRICT_FLAG="--strict"
+
+        # Run check
+        adr-buddy check $STRICT_FLAG --format=json > /tmp/adr-check-result.json || true
+
+        # Run sync dry-run
+        adr-buddy sync --dry-run --format=json > /tmp/adr-sync-preview.json || true
+
+        # Run validation script
+        ${{ github.action_path }}/scripts/validate.sh
+
+    - name: Run Sync Mode
+      if: inputs.mode == 'sync'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        CREATE_PR: ${{ inputs.create-pr }}
+        REVIEWERS: ${{ inputs.reviewers }}
+      run: |
+        adr-buddy sync
+
+        if [ -n "$(git status --porcelain)" ]; then
+          ${{ github.action_path }}/scripts/sync.sh
+        else
+          echo "No ADR changes detected"
+        fi
+
+    - name: Set Outputs
+      id: set-outputs
+      shell: bash
+      run: |
+        # Outputs are set by validate.sh or sync.sh scripts
+        # This step ensures they're propagated to the action outputs
+        if [ -f /tmp/adr-action-outputs.env ]; then
+          cat /tmp/adr-action-outputs.env >> $GITHUB_OUTPUT
+        fi
