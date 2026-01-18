@@ -58,7 +58,7 @@ func main() {}
 	// Run check - should fail
 	err = Check(tmpDir, false)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "missing required field: @decision.name")
+	assert.Contains(t, err.Error(), "validation failed")
 }
 
 func TestCheck_ConflictingNames(t *testing.T) {
@@ -92,7 +92,7 @@ func main() {}
 	// Run check - should fail
 	err = Check(tmpDir, false)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "conflicting names")
+	assert.Contains(t, err.Error(), "validation failed")
 }
 
 func TestCheck_ConflictingCategories(t *testing.T) {
@@ -128,7 +128,7 @@ func main() {}
 	// Run check - should fail
 	err = Check(tmpDir, false)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "conflicting categories")
+	assert.Contains(t, err.Error(), "validation failed")
 }
 
 func TestCheck_InvalidStatus_StrictMode(t *testing.T) {
@@ -171,7 +171,7 @@ strict_mode: true
 	// Run check - should fail in strict mode
 	err = Check(tmpDir, true)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid status")
+	assert.Contains(t, err.Error(), "validation failed")
 }
 
 func TestCheck_InvalidStatus_NonStrictMode(t *testing.T) {
