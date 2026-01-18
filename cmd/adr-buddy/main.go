@@ -43,7 +43,8 @@ var checkCmd = &cobra.Command{
 	Short: "Validate annotations without generating files",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		strict, _ := cmd.Flags().GetBool("strict")
-		return cli.Check(".", strict)
+		format, _ := cmd.Flags().GetString("format")
+		return cli.CheckWithFormat(".", strict, format, os.Stdout)
 	},
 }
 
@@ -61,6 +62,7 @@ func init() {
 	syncCmd.Flags().Bool("watch", false, "Continuous mode (re-run on file changes)")
 
 	checkCmd.Flags().Bool("strict", false, "Treat warnings as errors")
+	checkCmd.Flags().String("format", "text", "Output format: text or json")
 
 	listCmd.Flags().String("category", "", "Filter by category")
 

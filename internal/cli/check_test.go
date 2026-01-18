@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/weaby/adr-buddy/internal/model"
 )
 
 func TestCheck_ValidAnnotations(t *testing.T) {
@@ -305,4 +308,35 @@ func db2() {}
 	// Run check - should succeed
 	err = Check(tmpDir, false)
 	assert.NoError(t, err)
+}
+
+func TestCheck_JSONFormat(t *testing.T) {
+	// Setup temp directory with valid annotations
+	tmpDir := t.TempDir()
+
+	// Write config
+	configDir := filepath.Join(tmpDir, ".adr-buddy")
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+	configContent := `scan_paths: ["."]
+output_dir: "./decisions"`
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(configContent), 0644))
+
+	// Write source file with annotation
+	sourceFile := filepath.Join(tmpDir, "test.js")
+	sourceContent := `// @decision.id: adr-1
+// @decision.name: Test Decision
+const x = 1;`
+	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
+
+	// Capture stdout
+	var buf bytes.Buffer
+	err := CheckWithFormat(tmpDir, false, "json", &buf)
+	require.NoError(t, err)
+
+	// Parse JSON output
+	var result model.CheckResult
+	err = json.Unmarshal(buf.Bytes(), &result)
+	require.NoError(t, err)
+	assert.Equal(t, "pass", result.Status)
+	assert.Equal(t, 1, result.Summary.TotalAnnotations)
 }
