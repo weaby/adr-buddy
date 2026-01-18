@@ -103,11 +103,24 @@ PR_BODY+="
 # Create PR
 PR_TITLE="[ADR Buddy] Sync ADRs from ${COMMIT_SHA}"
 
-gh pr create \
+# Try to create PR with labels first
+if ! gh pr create \
   --title "$PR_TITLE" \
   --body "$PR_BODY" \
   --label "documentation,automated" \
-  --base main
+  --base main 2>/dev/null; then
+
+  echo "⚠️  Could not add labels (labels may not exist in repository)"
+  echo "Creating PR without labels..."
+
+  # Create PR without labels
+  gh pr create \
+    --title "$PR_TITLE" \
+    --body "$PR_BODY" \
+    --base main
+
+  echo "💡 Tip: Create 'documentation' and 'automated' labels in your repository settings to enable auto-labeling"
+fi
 
 # Get PR number and URL
 PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
