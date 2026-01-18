@@ -54,10 +54,20 @@ runs:
     - name: Install ADR Buddy
       shell: bash
       run: |
-        if [ "${{ inputs.version }}" = "latest" ]; then
-          go install github.com/weaby/adr-buddy/cmd/adr-buddy@latest
+        # Check if we're running from local source (uses: ./)
+        if [ -f "${{ github.action_path }}/go.mod" ]; then
+          echo "Building from local source..."
+          cd "${{ github.action_path }}"
+          go build -o /tmp/adr-buddy ./cmd/adr-buddy
+          sudo mv /tmp/adr-buddy /usr/local/bin/adr-buddy
+          chmod +x /usr/local/bin/adr-buddy
         else
-          go install github.com/weaby/adr-buddy/cmd/adr-buddy@${{ inputs.version }}
+          echo "Installing from GitHub..."
+          if [ "${{ inputs.version }}" = "latest" ]; then
+            go install github.com/weaby/adr-buddy/cmd/adr-buddy@latest
+          else
+            go install github.com/weaby/adr-buddy/cmd/adr-buddy@${{ inputs.version }}
+          fi
         fi
 
     - name: Run Validate Mode
