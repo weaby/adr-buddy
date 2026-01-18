@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/weaby/adr-buddy/internal/model"
 )
 
 func TestSyncCommand(t *testing.T) {
@@ -133,4 +136,33 @@ const dbConnection = "postgresql://...";
 	// 6. Code locations should be updated
 	assert.Contains(t, adrStr, "database.js:")
 	assert.NotContains(t, adrStr, "old/path.js:5")
+}
+
+func TestSync_DryRunJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write config
+	configDir := filepath.Join(tmpDir, ".adr-buddy")
+	assert.NoError(t, os.MkdirAll(configDir, 0755))
+	configContent := `scan_paths: ["."]
+output_dir: "./decisions"`
+	assert.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(configContent), 0644))
+
+	// Write source file
+	sourceFile := filepath.Join(tmpDir, "test.js")
+	sourceContent := `// @decision.id: adr-1
+// @decision.name: Test Decision
+// @decision.status: accepted
+const x = 1;`
+	assert.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
+
+	var buf bytes.Buffer
+	err := SyncWithFormat(tmpDir, true, "json", &buf)
+	assert.NoError(t, err)
+
+	var result model.SyncResult
+	err = json.Unmarshal(buf.Bytes(), &result)
+	assert.NoError(t, err)
+	assert.True(t, result.ChangesDetected)
+	assert.Equal(t, 1, len(result.Files.Created))
 }

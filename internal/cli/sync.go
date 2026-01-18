@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -11,14 +13,21 @@ import (
 	"github.com/weaby/adr-buddy/internal/template"
 )
 
-// SyncCommand scans code and generates/updates ADR files
+// SyncCommand scans code and generates/updates ADR files (text output)
 func SyncCommand(rootDir string, dryRun bool, strict bool) error {
+	return SyncWithFormat(rootDir, dryRun, "text", os.Stdout)
+}
+
+// SyncWithFormat scans and syncs with specified output format
+func SyncWithFormat(rootDir string, dryRun bool, format string, output io.Writer) error {
 	cfg, err := config.Load(rootDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	fmt.Println("Scanning for annotations...")
+	if format == "text" {
+		fmt.Fprintln(output, "Scanning for annotations...")
+	}
 
 	// Scan all configured paths
 	var allAnnotations []*model.Annotation
@@ -35,10 +44,26 @@ func SyncCommand(rootDir string, dryRun bool, strict bool) error {
 		allAnnotations = append(allAnnotations, annotations...)
 	}
 
-	fmt.Printf("Found %d annotation(s)\n", len(allAnnotations))
+	if format == "text" {
+		fmt.Fprintf(output, "Found %d annotation(s)\n", len(allAnnotations))
+	}
 
 	if len(allAnnotations) == 0 {
-		fmt.Println("No annotations found.")
+		if format == "json" {
+			result := &model.SyncResult{
+				ChangesDetected: false,
+				Files: model.FileChanges{
+					Created:  []string{},
+					Modified: []string{},
+					Deleted:  []string{},
+				},
+				ADRs: []model.ADRChange{},
+			}
+			encoder := json.NewEncoder(output)
+			encoder.SetIndent("", "  ")
+			return encoder.Encode(result)
+		}
+		fmt.Fprintln(output, "No annotations found.")
 		return nil
 	}
 
@@ -48,7 +73,9 @@ func SyncCommand(rootDir string, dryRun bool, strict bool) error {
 		return fmt.Errorf("aggregation failed: %w", err)
 	}
 
-	fmt.Printf("Generated %d ADR(s)\n\n", len(adrs))
+	if format == "text" {
+		fmt.Fprintf(output, "Generated %d ADR(s)\n\n", len(adrs))
+	}
 
 	// Load template
 	tmplStr := template.DefaultTemplate()
@@ -65,11 +92,40 @@ func SyncCommand(rootDir string, dryRun bool, strict bool) error {
 		outputDir = filepath.Join(rootDir, outputDir)
 	}
 
+	result := &model.SyncResult{
+		ChangesDetected: false,
+		Files: model.FileChanges{
+			Created:  []string{},
+			Modified: []string{},
+			Deleted:  []string{},
+		},
+		ADRs: []model.ADRChange{},
+	}
+
 	for _, adr := range adrs {
 		outputPath := filepath.Join(outputDir, adr.OutputPath(""))
+		relPath, _ := filepath.Rel(rootDir, outputPath)
+
+		var action string
+		if _, err := os.Stat(outputPath); err == nil {
+			action = "update"
+			result.Files.Modified = append(result.Files.Modified, relPath)
+		} else {
+			action = "create"
+			result.Files.Created = append(result.Files.Created, relPath)
+		}
+
+		result.ADRs = append(result.ADRs, model.ADRChange{
+			ID:       adr.ID,
+			Name:     adr.Name,
+			Action:   action,
+			FilePath: relPath,
+		})
 
 		if dryRun {
-			fmt.Printf("[DRY RUN] Would write: %s\n", outputPath)
+			if format == "text" {
+				fmt.Fprintf(output, "[DRY RUN] Would write: %s\n", relPath)
+			}
 			continue
 		}
 
@@ -81,14 +137,18 @@ func SyncCommand(rootDir string, dryRun bool, strict bool) error {
 			if err != nil {
 				return fmt.Errorf("failed to merge %s: %w", outputPath, err)
 			}
-			fmt.Printf("Updated: %s\n", outputPath)
+			if format == "text" {
+				fmt.Fprintf(output, "Updated: %s\n", relPath)
+			}
 		} else {
 			// Render new
 			content, err = template.Render(adr, tmplStr)
 			if err != nil {
 				return fmt.Errorf("failed to render %s: %w", outputPath, err)
 			}
-			fmt.Printf("Created: %s\n", outputPath)
+			if format == "text" {
+				fmt.Fprintf(output, "Created: %s\n", relPath)
+			}
 		}
 
 		// Create directory if needed
@@ -102,8 +162,17 @@ func SyncCommand(rootDir string, dryRun bool, strict bool) error {
 		}
 	}
 
+	result.ChangesDetected = len(result.Files.Created) > 0 || len(result.Files.Modified) > 0
+
+	// Output based on format
+	if format == "json" {
+		encoder := json.NewEncoder(output)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(result)
+	}
+
 	if !dryRun {
-		fmt.Println("\n✓ Sync complete")
+		fmt.Fprintln(output, "\n✓ Sync complete")
 	}
 
 	return nil

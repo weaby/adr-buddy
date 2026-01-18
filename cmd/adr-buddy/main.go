@@ -29,12 +29,13 @@ var syncCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		watch, _ := cmd.Flags().GetBool("watch")
+		format, _ := cmd.Flags().GetString("format")
 
 		if watch {
 			return fmt.Errorf("watch mode not yet implemented")
 		}
 
-		return cli.SyncCommand(".", dryRun, false)
+		return cli.SyncWithFormat(".", dryRun, format, os.Stdout)
 	},
 }
 
@@ -60,6 +61,7 @@ var listCmd = &cobra.Command{
 func init() {
 	syncCmd.Flags().Bool("dry-run", false, "Show what would change without writing files")
 	syncCmd.Flags().Bool("watch", false, "Continuous mode (re-run on file changes)")
+	syncCmd.Flags().String("format", "text", "Output format: text or json")
 
 	checkCmd.Flags().Bool("strict", false, "Treat warnings as errors")
 	checkCmd.Flags().String("format", "text", "Output format: text or json")
