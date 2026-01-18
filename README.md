@@ -87,6 +87,101 @@ exclude:
   - "**/vendor/**"
 ```
 
+## GitHub Actions Integration
+
+ADR Buddy integrates seamlessly with GitHub Actions for automated validation and synchronization.
+
+### PR Validation Workflow
+
+Validates ADRs on every pull request:
+
+```yaml
+# .github/workflows/adr-validate.yml
+name: Validate ADRs
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - uses: weaby/adr-buddy@v1
+        with:
+          mode: validate
+```
+
+### Auto-Sync Workflow
+
+Automatically creates PRs with ADR updates after merges:
+
+```yaml
+# .github/workflows/adr-sync.yml
+name: Sync ADRs
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - uses: weaby/adr-buddy@v1
+        with:
+          mode: sync
+          reviewers: 'team-lead,architect'
+```
+
+### Configuration Options
+
+**Validate Mode:**
+- `mode: validate` - Run validation checks
+- `strict: true` - Treat warnings as errors (default: true)
+- `config-path: .adr-buddy/config.yml` - Custom config location
+
+**Sync Mode:**
+- `mode: sync` - Generate and sync ADR files
+- `create-pr: true` - Create PR with changes (default: true)
+- `reviewers: 'user1,user2'` - Comma-separated reviewers
+- `token: ${{ secrets.GITHUB_TOKEN }}` - GitHub token
+
+### Action Outputs
+
+The action provides outputs you can use in subsequent steps:
+
+```yaml
+- uses: weaby/adr-buddy@v1
+  id: adr
+  with:
+    mode: validate
+
+- name: Check validation status
+  if: steps.adr.outputs.validation-status == 'fail'
+  run: echo "Validation failed"
+```
+
+Available outputs:
+- `validation-status` - pass, warning, or fail
+- `changes-detected` - true if ADRs need updating
+- `pr-number` - PR number if created (sync mode)
+- `pr-url` - PR URL if created (sync mode)
+
 ## Examples
 
 ### One-to-Many: Same ADR Referenced in Multiple Files
