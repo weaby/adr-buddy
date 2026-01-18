@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="adr-buddy init" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="adr-buddy" />
+    <working_directory value="$PROJECT_DIR$" />
+    <parameters value="init" />
+    <kind value="PACKAGE" />
+    <package value="github.com/weaby/adr-buddy/cmd/adr-buddy" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/adr-buddy/main.go" />
+    <method v="2" />
+  </configuration>
+</component>
