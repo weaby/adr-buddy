@@ -33,6 +33,14 @@ inputs:
     description: 'GitHub token for API operations'
     required: false
     default: ${{ github.token }}
+  cloud-token:
+    description: 'ADR Buddy Cloud workspace token (optional)'
+    required: false
+    default: ''
+  cloud-url:
+    description: 'ADR Buddy Cloud API URL'
+    required: false
+    default: 'https://cloud.adr-buddy.dev'
 
 outputs:
   validation-status:
@@ -103,6 +111,23 @@ runs:
         else
           echo "No ADR changes detected"
         fi
+
+    - name: Sync to Cloud (if configured)
+      if: inputs.mode == 'sync' && inputs.cloud-token != ''
+      shell: bash
+      run: |
+        # Export ADRs to JSON format for cloud sync
+        adr-buddy sync --format=json > /tmp/adr-sync-output.json || true
+
+        # Send to Cloud API
+        ${{ github.action_path }}/scripts/cloud-sync.sh \
+          "${{ inputs.cloud-url }}" \
+          "${{ inputs.cloud-token }}" \
+          "${{ github.repository }}" \
+          "${{ github.repositoryUrl }}" \
+          "${{ github.ref_name }}" \
+          "${{ github.sha }}" \
+          "/tmp/adr-sync-output.json"
 
     - name: Set Outputs
       id: set-outputs
