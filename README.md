@@ -45,6 +45,43 @@ adr-buddy sync
 
 Your ADR will be created at `decisions/infrastructure/adr-1.md`!
 
+## Claude Code Integration
+
+ADR Buddy includes a Claude Code skill that teaches Claude how to create and manage ADRs in your codebase.
+
+### Installing the Skill
+
+During `adr-buddy init`, you'll be prompted to install the Claude Code skill:
+
+```
+Would you like to install the Claude Code skill?
+  [1] Project-level (.claude/skills/adr.md) - for this project only
+  [2] User-level (~/.claude/skills/adr.md) - available in all projects
+  [3] Skip - don't install the skill
+```
+
+Or use the `--claude-skill` flag for non-interactive installation:
+
+```bash
+# Install for this project only
+adr-buddy init --claude-skill=project
+
+# Install globally for all projects
+adr-buddy init --claude-skill=user
+
+# Skip skill installation
+adr-buddy init --claude-skill=skip
+```
+
+### What the Skill Does
+
+Once installed, Claude Code will automatically:
+- Recognize when you want to document an architectural decision
+- Read your project's ADR template and configuration
+- Create properly formatted annotations in your code
+- Suggest the next available ADR ID
+- Run `adr-buddy sync` to generate the ADR files
+
 ## Commands
 
 - `adr-buddy init` - Initialize configuration in current directory
