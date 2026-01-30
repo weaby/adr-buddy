@@ -142,3 +142,34 @@ grep -rn "middleware\|Middleware" --include="*.go" --include="*.ts" --include="*
 - Pattern name
 - Example file and line
 - How it's implemented
+
+## Step 3: Present Findings
+
+After scanning, present findings in this format:
+
+```
+Found [N] undocumented architectural decisions at depth level [L]:
+
+Dependencies ([count])
+ - [name] ([category])
+ - [name] ([category])
+ - ...
+
+Structural Patterns ([count])  [only if Level 2+]
+ - [pattern name] ([evidence folders])
+ - ...
+
+Code Patterns ([count])  [only if Level 3]
+ - [pattern name] ([example location])
+ - ...
+
+Already documented: [N] decisions ([list IDs])
+```
+
+**Filtering:**
+- Check existing `@decision.id` annotations in codebase
+- Check existing ADR files in output directory
+- Mark already-documented items and exclude from count
+
+**Then ask:**
+"Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies'."
