@@ -173,3 +173,36 @@ Already documented: [N] decisions ([list IDs])
 
 **Then ask:**
 "Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies'."
+
+## Step 4: Research Alternatives
+
+For each selected decision, research alternatives and considerations before asking the user.
+
+**Research Process:**
+
+1. **Identify the category** - What problem does this technology solve?
+2. **Web search for alternatives** - Search: "[technology] alternatives [year]"
+3. **Gather selection criteria** - What factors matter when choosing in this category?
+4. **Summarize findings** - Present 3-5 alternatives with key differentiators
+
+**Research Prompt Template:**
+
+```
+I'll document your choice of [TECHNOLOGY] for [CATEGORY].
+
+I've researched alternatives and considerations:
+
+**Alternatives:**
+- [Alt 1] - [Key differentiator, trade-off]
+- [Alt 2] - [Key differentiator, trade-off]
+- [Alt 3] - [Key differentiator, trade-off]
+
+**Key considerations for [CATEGORY] selection:**
+- [Factor 1]
+- [Factor 2]
+- [Factor 3]
+```
+
+**Research Scope:**
+- For common technologies: Use knowledge + brief web search to confirm current status
+- For obscure/newer tools: More thorough web search for alternatives and community status
