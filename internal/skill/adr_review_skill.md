@@ -303,3 +303,52 @@ Use the Edit tool to add the annotation comment block directly above the relevan
 **Comment Style:**
 - Go, JS, TS, Java, C, Rust: `//`
 - Python, Ruby, YAML, Shell: `#`
+
+## Step 7: Check for Duplicates
+
+Before adding each annotation, check for existing ADRs on the same topic:
+
+```bash
+# Search existing annotations
+grep -r "@decision" --include="*.go" --include="*.ts" --include="*.js" --include="*.py" | grep -i "[TECHNOLOGY]"
+
+# Search existing ADR files
+ls decisions/ 2>/dev/null | xargs -I {} grep -l "[TECHNOLOGY]" decisions/{} 2>/dev/null
+```
+
+**If duplicate found:**
+```
+I found an existing ADR that might cover this:
+- [ADR-XXX]: [Title]
+
+Options:
+1. Skip - this is already documented
+2. Update - add more context to the existing ADR
+3. Create new - this is a different aspect of the same technology
+```
+
+## Step 8: Sync and Complete
+
+After all selected decisions are documented:
+
+```bash
+# Validate annotations
+adr-buddy check
+
+# Generate/update ADR files
+adr-buddy sync
+```
+
+**Report completion:**
+```
+Added [N] new decision annotations
+
+Running `adr-buddy sync`...
+
+Generated:
+- decisions/adr-[ID].md ([Title])
+- decisions/adr-[ID].md ([Title])
+...
+
+All decisions documented! The ADR files are ready for commit.
+```
