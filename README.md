@@ -257,4 +257,4 @@ Each annotation generates its own ADR file, both referencing the same source fil
 
 ## License
 
-MIT
+ADR Buddy is licensed under the [Elastic License 2.0](LICENSE). You're free to use it in your projects, but you can't offer it as a hosted service.
