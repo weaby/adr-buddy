@@ -1,260 +1,102 @@
 # ADR Buddy
 
-A language-agnostic CLI tool that generates Architecture Decision Records (ADRs) from code annotations.
+<img src="docs/assets/logo.png" alt="ADR Buddy Logo" width="150">
+
+[![Go 1.21+](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![License](https://img.shields.io/badge/License-Elastic%202.0-blue)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://weaby.github.io/adr-buddy)
+
+**AI builds fast. Documentation doesn't keep up.**
+
+Code is being written faster than ever with AI assistants—but architectural decisions are getting lost in the velocity. Six months from now, no one remembers *why* that database was chosen or *why* that retry logic exists.
+
+ADR Buddy fixes this by capturing decisions inline in your code. And with Claude Code integration, it happens automatically as you build—the same AI that makes the decisions also documents them.
 
 ## Features
 
-- 📝 Write ADRs directly in your code using simple comment annotations
-- 🔄 Automatically generate and sync ADR documentation
-- 🌍 Language-agnostic: works with Go, JavaScript, TypeScript, Python, Ruby, and more
-- 🎯 Smart merge: preserves manual edits while updating from annotations
-- 📁 Flexible organization: optional categorization of ADRs
-- ⚡ Zero configuration required to get started
+- **Inline annotations** — Decisions live in your code, right where they're implemented
+- **Auto-generated docs** — Run `adr-buddy sync` to generate markdown ADRs from annotations
+- **Claude Code skills** — AI documents decisions as it codes (`/adr`) and discovers undocumented ones (`/adr-review`)
+- **GitHub Actions** — Validate ADRs on PRs, auto-sync on merge
+- **Language-agnostic** — Works with Go, TypeScript, Python, Rust, Ruby, and any language with comments
+- **Zero config** — Start with `adr-buddy init`, customize later if needed
 
-## Installation
+## Quick Start
+
+### Install
 
 ```bash
 go install github.com/weaby/adr-buddy/cmd/adr-buddy@latest
 ```
 
-## Quick Start
+### Initialize
 
-1. Initialize in your project:
 ```bash
 adr-buddy init
 ```
 
-2. Add annotations to your code:
-```javascript
-// @decision.id: adr-1
-// @decision.name: Using Pino for logging
-// @decision.status: accepted
-// @decision.category: infrastructure
-// @decision.context: We needed structured logging with low overhead
-//   for our high-throughput API.
-// @decision.decision: Adopt Pino as the standard logging library.
-// @decision.consequences: Better performance but team needs training.
+This creates `.adr-buddy/` with config and template, and optionally installs Claude Code skills.
 
-const pino = require('pino');
+### Add your first decision
+
+```go
+// @decision.id: adr-001
+// @decision.name: PostgreSQL for primary datastore
+// @decision.context: Need ACID compliance and strong ecosystem support.
+// @decision.decision: Use PostgreSQL over MySQL or MongoDB.
+// @decision.consequences: Team familiar with it, good tooling available.
+
+func NewDatabase() *sql.DB {
 ```
 
-3. Generate ADR documentation:
+### Generate ADR files
+
 ```bash
 adr-buddy sync
 ```
 
-Your ADR will be created at `decisions/infrastructure/adr-1.md`!
+Your ADR is now at `decisions/adr-001.md`.
 
 ## Claude Code Integration
 
-ADR Buddy includes a Claude Code skill that teaches Claude how to create and manage ADRs in your codebase.
+ADR Buddy includes two skills that make documentation effortless:
 
-### Installing the Skill
+### `/adr` — Document as you code
 
-During `adr-buddy init`, you'll be prompted to install the Claude Code skill:
+Claude automatically recognizes architectural decisions and documents them inline. When you choose a library, implement a pattern, or make a trade-off, Claude adds the annotation without being asked.
 
-```
-Would you like to install the Claude Code skill?
-  [1] Project-level (.claude/skills/adr.md) - for this project only
-  [2] User-level (~/.claude/skills/adr.md) - available in all projects
-  [3] Skip - don't install the skill
-```
+### `/adr-review` — Discover undocumented decisions
 
-Or use the `--claude-skill` flag for non-interactive installation:
+Already have a codebase? This skill scans your project for technology choices and patterns that were never documented—then guides you through capturing them as ADRs.
 
-```bash
-# Install for this project only
-adr-buddy init --claude-skill=project
+Install skills during `adr-buddy init` or manually:
+- Project-level: `.claude/skills/adr.md`
+- User-level: `~/.claude/skills/adr.md`
 
-# Install globally for all projects
-adr-buddy init --claude-skill=user
-
-# Skip skill installation
-adr-buddy init --claude-skill=skip
-```
-
-### What the Skill Does
-
-Once installed, Claude Code will automatically:
-- Recognize when you want to document an architectural decision
-- Read your project's ADR template and configuration
-- Create properly formatted annotations in your code
-- Suggest the next available ADR ID
-- Run `adr-buddy sync` to generate the ADR files
+[Learn more in the docs →](https://weaby.github.io/adr-buddy/claude-code)
 
 ## Commands
 
-- `adr-buddy init` - Initialize configuration in current directory
-- `adr-buddy sync` - Scan code and generate/update ADR files
-- `adr-buddy check` - Validate annotations without generating files
-- `adr-buddy list` - List all discovered ADRs
+| Command | Description |
+|---------|-------------|
+| `adr-buddy init` | Initialize config, template, and optionally Claude skills |
+| `adr-buddy sync` | Generate/update ADR files from annotations |
+| `adr-buddy check` | Validate annotations without generating files |
+| `adr-buddy list` | List all discovered ADRs |
 
-## Annotation Reference
+## GitHub Actions
 
-**Required:**
-- `@decision.id` - Unique identifier (e.g., "adr-1")
-- `@decision.name` - Decision title
+ADR Buddy integrates with GitHub Actions for automated validation and sync:
 
-**Optional:**
-- `@decision.status` - proposed | accepted | rejected | deprecated | superseded
-- `@decision.category` - Organizational category
-- `@decision.context` - Background and rationale (multi-line)
-- `@decision.decision` - The choice made (multi-line)
-- `@decision.consequences` - Outcomes and impacts (multi-line)
+- **Validate on PRs** — Catch missing or malformed ADRs before merge
+- **Auto-sync on push** — Keep ADR files in sync automatically
 
-## Multi-line Values
+[See workflow examples →](https://weaby.github.io/adr-buddy/github-actions)
 
-Use indentation for continuation:
-```javascript
-// @decision.context: This is the first line
-//   and this continues on the next line
-//   and this is the third line.
-```
+## Documentation
 
-## Configuration
-
-Optional `.adr-buddy/config.yml`:
-```yaml
-scan_paths:
-  - ./src
-  - ./lib
-output_dir: ./decisions
-exclude:
-  - "**/node_modules/**"
-  - "**/vendor/**"
-```
-
-## GitHub Actions Integration
-
-ADR Buddy integrates seamlessly with GitHub Actions for automated validation and synchronization.
-
-### PR Validation Workflow
-
-Validates ADRs on every pull request:
-
-```yaml
-# .github/workflows/adr-validate.yml
-name: Validate ADRs
-
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-      - uses: weaby/adr-buddy@v1
-        with:
-          mode: validate
-```
-
-### Auto-Sync Workflow
-
-Automatically creates PRs with ADR updates after merges:
-
-```yaml
-# .github/workflows/adr-sync.yml
-name: Sync ADRs
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-      - uses: weaby/adr-buddy@v1
-        with:
-          mode: sync
-          reviewers: 'team-lead,architect'
-```
-
-### Configuration Options
-
-**Validate Mode:**
-- `mode: validate` - Run validation checks
-- `strict: true` - Treat warnings as errors (default: true)
-- `config-path: .adr-buddy/config.yml` - Custom config location
-
-**Sync Mode:**
-- `mode: sync` - Generate and sync ADR files
-- `create-pr: true` - Create PR with changes (default: true)
-- `reviewers: 'user1,user2'` - Comma-separated reviewers
-- `token: ${{ secrets.GITHUB_TOKEN }}` - GitHub token
-
-### Action Outputs
-
-The action provides outputs you can use in subsequent steps:
-
-```yaml
-- uses: weaby/adr-buddy@v1
-  id: adr
-  with:
-    mode: validate
-
-- name: Check validation status
-  if: steps.adr.outputs.validation-status == 'fail'
-  run: echo "Validation failed"
-```
-
-Available outputs:
-- `validation-status` - pass, warning, or fail
-- `changes-detected` - true if ADRs need updating
-- `pr-number` - PR number if created (sync mode)
-- `pr-url` - PR URL if created (sync mode)
-
-## Examples
-
-### One-to-Many: Same ADR Referenced in Multiple Files
-
-`src/logger.js`:
-```javascript
-// @decision.id: adr-1
-// @decision.name: Using Pino
-// @decision.context: Need fast logging
-const logger = require('pino')();
-```
-
-`src/monitor.js`:
-```javascript
-// @decision.id: adr-1
-// @decision.name: Using Pino
-// @decision.decision: Use Pino everywhere
-const logger = require('./logger');
-```
-
-Both annotations merge into a single `decisions/adr-1.md` with two code locations.
-
-### Many-to-One: Multiple ADRs in One File
-
-```python
-# @decision.id: adr-5
-# @decision.name: Microservices architecture
-# ...
-
-# @decision.id: adr-12
-# @decision.name: gRPC for inter-service communication
-# ...
-```
-
-Each annotation generates its own ADR file, both referencing the same source file.
+Full documentation available at [weaby.github.io/adr-buddy](https://weaby.github.io/adr-buddy)
 
 ## License
 
-ADR Buddy is licensed under the [Elastic License 2.0](LICENSE). You're free to use it in your projects, but you can't offer it as a hosted service.
+ADR Buddy is licensed under the [Elastic License 2.0](LICENSE).
