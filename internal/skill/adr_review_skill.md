@@ -50,3 +50,36 @@ Present as multiple choice:
 3. Level 3 - Full analysis including code patterns
 
 Default to Level 1 if user wants a quick scan.
+
+## Step 2: Scan for Decisions
+
+### Level 1: Dependencies
+
+Scan these files to discover technology choices:
+
+**Dependency Manifests:**
+
+| File | Command | What to extract |
+|------|---------|-----------------|
+| `go.mod` | `grep -E "^\t[a-z]" go.mod` | Direct dependencies (not indented with //) |
+| `package.json` | Read `dependencies` and `devDependencies` keys | Package names |
+| `requirements.txt` | `cat requirements.txt` | Package names (ignore version specs) |
+| `pyproject.toml` | Read `[project.dependencies]` section | Package names |
+| `Cargo.toml` | Read `[dependencies]` section | Crate names |
+| `Gemfile` | `grep "^gem " Gemfile` | Gem names |
+
+**Configuration Files:**
+
+| File | What to extract |
+|------|-----------------|
+| `docker-compose.yml` | Service images (postgres:*, redis:*, etc.) |
+| `Dockerfile` | Base image (FROM line) |
+| `.github/workflows/*.yml` | Actions used, test commands |
+| `.env.example` | External service references |
+| `Makefile` | Build tools referenced |
+
+**For each discovered technology, record:**
+- Name (e.g., "postgresql")
+- Category (database, cache, framework, library, etc.)
+- Source file where found
+- Usage context (e.g., "docker-compose service" or "direct dependency")
