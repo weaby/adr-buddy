@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/annotations/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/claude-code/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/commands/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/configuration/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/getting-started/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+    <url>
+         <loc>https://weaby.github.io/adr-buddy/github-actions/</loc>
+         <lastmod>2026-01-30</lastmod>
+    </url>
+</urlset>
