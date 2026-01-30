@@ -1,3 +1,7 @@
+<div style="text-align: center; margin-bottom: 2rem;">
+  <img src="assets/logo.png" alt="ADR Buddy" width="180">
+</div>
+
 # ADR Buddy
 
 **AI builds fast. Documentation doesn't keep up.**
