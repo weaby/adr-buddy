@@ -83,3 +83,29 @@ Scan these files to discover technology choices:
 - Category (database, cache, framework, library, etc.)
 - Source file where found
 - Usage context (e.g., "docker-compose service" or "direct dependency")
+
+### Level 2: Structural Patterns
+
+In addition to Level 1, analyze folder structure for architectural patterns:
+
+**Pattern Detection:**
+
+| Pattern | Indicator Folders | Decision to Document |
+|---------|-------------------|---------------------|
+| Layered Architecture | `/controllers`, `/services`, `/repositories`, `/models` | "Layered architecture pattern" |
+| Hexagonal/Ports-Adapters | `/domain`, `/adapters`, `/ports`, `/application` | "Hexagonal architecture pattern" |
+| Feature-based Modules | `/features/*`, `/modules/*` with self-contained subfolders | "Feature-based module organization" |
+| Clean Architecture | `/entities`, `/usecases`, `/interfaces`, `/frameworks` | "Clean architecture pattern" |
+| MVC | `/models`, `/views`, `/controllers` | "MVC pattern" |
+| CQRS | `/commands`, `/queries`, `/handlers` | "CQRS pattern" |
+
+**Detection Command:**
+
+```bash
+find . -type d -maxdepth 3 | grep -E "(controller|service|repositor|domain|adapter|port|feature|module|entity|usecase|handler|command|query)" | head -20
+```
+
+**For each detected pattern, record:**
+- Pattern name
+- Evidence (which folders exist)
+- Root location
