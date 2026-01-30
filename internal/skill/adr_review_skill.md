@@ -206,3 +206,67 @@ I've researched alternatives and considerations:
 **Research Scope:**
 - For common technologies: Use knowledge + brief web search to confirm current status
 - For obscure/newer tools: More thorough web search for alternatives and community status
+
+## Step 5: Guided Documentation Conversation
+
+For each selected decision, follow this conversation flow:
+
+### 5.1 Present Research (from Step 4)
+
+Show the alternatives and considerations you researched.
+
+### 5.2 Ask "Why"
+
+```
+Why did you choose [TECHNOLOGY] for this project?
+```
+
+Wait for response. This becomes the core of `@decision.context` and `@decision.decision`.
+
+### 5.3 Explore Constraints
+
+```
+What constraints or factors influenced this decision?
+(e.g., team expertise, performance requirements, existing infrastructure, cost, timeline)
+```
+
+Wait for response. This enriches `@decision.context`.
+
+### 5.4 Capture Trade-offs
+
+```
+Any trade-offs or concerns you're aware of with this choice?
+```
+
+Wait for response. This becomes `@decision.consequences`.
+
+### 5.5 Confirm Alternatives
+
+```
+From the alternatives I listed, were any of these seriously considered?
+[List the alternatives you researched]
+```
+
+Wait for response. This becomes `@decision.alternatives`.
+
+### 5.6 Draft Annotation
+
+Synthesize all responses into a draft annotation:
+
+```
+Here's the ADR annotation I'll add:
+
+// @decision.id: adr-[NEXT_ID]
+// @decision.name: [Short title from technology + category]
+// @decision.status: accepted
+// @decision.context: [Synthesized from user's "why" and constraints]
+// @decision.decision: [What was chosen and key configuration]
+// @decision.alternatives:
+//   - [Alt 1]: [Why not chosen]
+//   - [Alt 2]: [Why not chosen]
+// @decision.consequences: [From trade-offs discussion]
+
+Does this look right? Any changes?
+```
+
+Wait for confirmation before proceeding.
