@@ -1,5 +1,6 @@
 site_name: ADR Buddy
 site_description: Documentation for ADR Buddy
+site_url: https://weaby.github.io/adr-buddy/
 repo_url: https://github.com/weaby/adr-buddy
 repo_name: weaby/adr-buddy
 
