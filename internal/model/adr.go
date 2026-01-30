@@ -25,6 +25,7 @@ type Annotation struct {
 	Category     string            // Optional (empty = root)
 	Context      string            // Optional multi-line
 	Decision     string            // Optional multi-line
+	Alternatives string            // Optional multi-line
 	Consequences string            // Optional multi-line
 	CustomFields map[string]string // Future extensibility
 	Location     SourceLocation    // Where this annotation appears
@@ -58,6 +59,7 @@ type ADR struct {
 	Date         string           // Auto-generated on first creation
 	Context      []string         // Merged from all annotations
 	Decision     []string         // Merged from all annotations
+	Alternatives []string         // Merged from all annotations
 	Consequences []string         // Merged from all annotations
 	Locations    []SourceLocation // All code locations
 }

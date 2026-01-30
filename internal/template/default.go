@@ -28,6 +28,16 @@ func DefaultTemplate() string {
 <!-- TODO: Document the decision and rationale -->
 {{end}}
 
+## Alternatives Considered
+{{if .Alternatives}}
+{{range .Alternatives}}
+{{.}}
+
+{{end}}
+{{else}}
+<!-- TODO: What alternatives were considered and why were they rejected? -->
+{{end}}
+
 ## Consequences
 {{if .Consequences}}
 {{range .Consequences}}

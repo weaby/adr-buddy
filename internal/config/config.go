@@ -29,6 +29,7 @@ func Default() *Config {
 			"**/dist/**",
 			"**/.next/**",
 			"**/.adr-buddy/**",
+			"**/.claude/**",
 			"**/.github/**",
 		},
 		Template:   "",

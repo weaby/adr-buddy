@@ -15,7 +15,7 @@ func TestInstallProjectLevel(t *testing.T) {
 	err := InstallProjectLevel(tmpDir)
 	require.NoError(t, err)
 
-	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
+	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
 	content, err := os.ReadFile(skillPath)
 	require.NoError(t, err)
 
@@ -32,7 +32,7 @@ func TestInstallUserLevel(t *testing.T) {
 	err := InstallUserLevel()
 	require.NoError(t, err)
 
-	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
+	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
 	content, err := os.ReadFile(skillPath)
 	require.NoError(t, err)
 
@@ -70,7 +70,7 @@ func TestInstallProjectLevel_Idempotent(t *testing.T) {
 	err := InstallProjectLevel(tmpDir)
 	require.NoError(t, err)
 
-	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
+	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
 	err = os.WriteFile(skillPath, []byte("custom content"), 0644)
 	require.NoError(t, err)
 

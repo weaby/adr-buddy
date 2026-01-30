@@ -188,6 +188,8 @@ func setAnnotationField(ann *model.Annotation, field, value string) {
 		ann.Context = value
 	case "decision":
 		ann.Decision = value
+	case "alternatives":
+		ann.Alternatives = value
 	case "consequences":
 		ann.Consequences = value
 	default:
@@ -202,6 +204,8 @@ func appendToField(ann *model.Annotation, field, value string) {
 		ann.Context += "\n" + value
 	case "decision":
 		ann.Decision += "\n" + value
+	case "alternatives":
+		ann.Alternatives += "\n" + value
 	case "consequences":
 		ann.Consequences += "\n" + value
 	default:

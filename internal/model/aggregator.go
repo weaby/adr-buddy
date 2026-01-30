@@ -25,6 +25,7 @@ func Aggregate(annotations []*Annotation) ([]*ADR, error) {
 				Date:         time.Now().Format("2006-01-02"),
 				Context:      []string{},
 				Decision:     []string{},
+				Alternatives: []string{},
 				Consequences: []string{},
 				Locations:    []SourceLocation{},
 			}
@@ -47,6 +48,9 @@ func Aggregate(annotations []*Annotation) ([]*ADR, error) {
 		}
 		if ann.Decision != "" {
 			adr.Decision = append(adr.Decision, ann.Decision)
+		}
+		if ann.Alternatives != "" {
+			adr.Alternatives = append(adr.Alternatives, ann.Alternatives)
 		}
 		if ann.Consequences != "" {
 			adr.Consequences = append(adr.Consequences, ann.Consequences)
