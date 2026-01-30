@@ -270,3 +270,36 @@ Does this look right? Any changes?
 ```
 
 Wait for confirmation before proceeding.
+
+## Step 6: Add Annotations
+
+### Placement Rules
+
+Add annotations at the most relevant location for each decision type:
+
+| Decision Type | Placement Strategy |
+|---------------|-------------------|
+| Database dependency | Connection/client initialization file |
+| Cache dependency | Cache client setup file |
+| Web framework | Main app entry point (main.go, app.ts, etc.) |
+| Library dependency | First significant import/usage |
+| Structural pattern | First file in the pattern (e.g., first service in /services) |
+| Code pattern | Primary example of the pattern |
+
+### Finding Placement Location
+
+```bash
+# For a dependency, find where it's imported/used
+grep -rn "import.*[package]" --include="*.go" --include="*.ts" --include="*.js" | head -3
+
+# For docker-compose services, the annotation goes in the connection code
+grep -rn "postgres\|redis\|mongo" --include="*.go" --include="*.ts" | head -3
+```
+
+### Adding the Annotation
+
+Use the Edit tool to add the annotation comment block directly above the relevant code (import statement, function definition, or configuration).
+
+**Comment Style:**
+- Go, JS, TS, Java, C, Rust: `//`
+- Python, Ruby, YAML, Shell: `#`
