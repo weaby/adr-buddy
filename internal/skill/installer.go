@@ -7,7 +7,7 @@ import (
 )
 
 func InstallProjectLevel(projectRoot string) error {
-	skillDir := filepath.Join(projectRoot, ".claude", "skills")
+	skillDir := GetSkillPath(projectRoot)
 	return install(skillDir)
 }
 
@@ -16,22 +16,21 @@ func InstallUserLevel() error {
 	if err != nil {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
-	skillDir := filepath.Join(homeDir, ".claude", "skills")
+	skillDir := GetSkillPath(homeDir)
 	return install(skillDir)
 }
 
-func install(skillDir string) error {
-	skillPath := filepath.Join(skillDir, "adr.md")
-
-	if _, err := os.Stat(skillPath); err == nil {
+func install(skillFilePath string) error {
+	if _, err := os.Stat(skillFilePath); err == nil {
 		return nil
 	}
 
+	skillDir := filepath.Dir(skillFilePath)
 	if err := os.MkdirAll(skillDir, 0755); err != nil {
 		return fmt.Errorf("failed to create skill directory: %w", err)
 	}
 
-	if err := os.WriteFile(skillPath, []byte(DefaultSkill), 0644); err != nil {
+	if err := os.WriteFile(skillFilePath, []byte(DefaultSkill), 0644); err != nil {
 		return fmt.Errorf("failed to write skill file: %w", err)
 	}
 
@@ -39,7 +38,7 @@ func install(skillDir string) error {
 }
 
 func ExistsProjectLevel(projectRoot string) bool {
-	skillPath := filepath.Join(projectRoot, ".claude", "skills", "adr.md")
+	skillPath := GetSkillPath(projectRoot)
 	_, err := os.Stat(skillPath)
 	return err == nil
 }
@@ -49,7 +48,64 @@ func ExistsUserLevel() bool {
 	if err != nil {
 		return false
 	}
-	skillPath := filepath.Join(homeDir, ".claude", "skills", "adr.md")
+	skillPath := GetSkillPath(homeDir)
 	_, err = os.Stat(skillPath)
 	return err == nil
+}
+
+func GetSkillPath(rootDir string) string {
+	return filepath.Join(rootDir, ".claude", "skills", "adr", "SKILL.md")
+}
+
+// ADR Review skill installer functions
+
+func InstallAdrReviewProjectLevel(projectRoot string) error {
+	skillDir := GetAdrReviewSkillPath(projectRoot)
+	return installAdrReview(skillDir)
+}
+
+func InstallAdrReviewUserLevel() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	skillDir := GetAdrReviewSkillPath(homeDir)
+	return installAdrReview(skillDir)
+}
+
+func installAdrReview(skillFilePath string) error {
+	if _, err := os.Stat(skillFilePath); err == nil {
+		return nil
+	}
+
+	skillDir := filepath.Dir(skillFilePath)
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		return fmt.Errorf("failed to create skill directory: %w", err)
+	}
+
+	if err := os.WriteFile(skillFilePath, []byte(AdrReviewSkill), 0644); err != nil {
+		return fmt.Errorf("failed to write skill file: %w", err)
+	}
+
+	return nil
+}
+
+func ExistsAdrReviewProjectLevel(projectRoot string) bool {
+	skillPath := GetAdrReviewSkillPath(projectRoot)
+	_, err := os.Stat(skillPath)
+	return err == nil
+}
+
+func ExistsAdrReviewUserLevel() bool {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	skillPath := GetAdrReviewSkillPath(homeDir)
+	_, err = os.Stat(skillPath)
+	return err == nil
+}
+
+func GetAdrReviewSkillPath(rootDir string) string {
+	return filepath.Join(rootDir, ".claude", "skills", "adr-review", "SKILL.md")
 }

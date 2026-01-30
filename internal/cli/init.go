@@ -61,19 +61,27 @@ func InitWithSkill(rootDir string, skillLocation SkillLocation) error {
 		return err
 	}
 
-	// Install Claude Code skill if requested
+	// Install Claude Code skills if requested
 	switch skillLocation {
 	case SkillLocationProject:
 		if err := skill.InstallProjectLevel(rootDir); err != nil {
-			return fmt.Errorf("failed to install skill: %w", err)
+			return fmt.Errorf("failed to install adr skill: %w", err)
 		}
-		fmt.Println("Installed Claude Code skill:", filepath.Join(rootDir, ".claude", "skills", "adr.md"))
+		fmt.Println("Installed Claude Code skill:", skill.GetSkillPath(rootDir))
+		if err := skill.InstallAdrReviewProjectLevel(rootDir); err != nil {
+			return fmt.Errorf("failed to install adr-review skill: %w", err)
+		}
+		fmt.Println("Installed Claude Code skill:", skill.GetAdrReviewSkillPath(rootDir))
 	case SkillLocationUser:
 		if err := skill.InstallUserLevel(); err != nil {
-			return fmt.Errorf("failed to install skill: %w", err)
+			return fmt.Errorf("failed to install adr skill: %w", err)
 		}
 		homeDir, _ := os.UserHomeDir()
-		fmt.Println("Installed Claude Code skill:", filepath.Join(homeDir, ".claude", "skills", "adr.md"))
+		fmt.Println("Installed Claude Code skill:", skill.GetSkillPath(homeDir))
+		if err := skill.InstallAdrReviewUserLevel(); err != nil {
+			return fmt.Errorf("failed to install adr-review skill: %w", err)
+		}
+		fmt.Println("Installed Claude Code skill:", skill.GetAdrReviewSkillPath(homeDir))
 	}
 
 	fmt.Println("Initialized .adr-buddy directory successfully!")
