@@ -109,3 +109,36 @@ find . -type d -maxdepth 3 | grep -E "(controller|service|repositor|domain|adapt
 - Pattern name
 - Evidence (which folders exist)
 - Root location
+
+### Level 3: Code Patterns
+
+In addition to Levels 1-2, analyze code for design patterns:
+
+**Pattern Detection:**
+
+| Pattern | Search Strategy | Indicators |
+|---------|-----------------|------------|
+| Dependency Injection | Search for constructor params that are interfaces | `func New.*\(.*Interface\)` |
+| Repository Pattern | Search for Repository suffix | `type.*Repository interface` or `class.*Repository` |
+| Factory Pattern | Search for Factory suffix or New* funcs returning interfaces | `func New.*\(\).*Interface` |
+| Singleton | Search for GetInstance or sync.Once usage | `sync.Once` or `getInstance` |
+| Observer/Pub-Sub | Search for Subscribe/Publish patterns | `Subscribe\(`, `Publish\(`, `EventEmitter` |
+| Middleware Chain | Search for middleware patterns | `func.*Middleware`, `app.use\(` |
+
+**Detection Commands:**
+
+```bash
+# Repository pattern (Go)
+grep -r "Repository interface" --include="*.go" | head -5
+
+# Dependency injection (constructor with interface params)
+grep -rn "func New" --include="*.go" | grep -E "\(.*[A-Z][a-z]+er\)" | head -5
+
+# Middleware (various languages)
+grep -rn "middleware\|Middleware" --include="*.go" --include="*.ts" --include="*.js" | head -5
+```
+
+**For each detected pattern, record:**
+- Pattern name
+- Example file and line
+- How it's implemented
