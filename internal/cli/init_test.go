@@ -138,8 +138,14 @@ func TestInitWithSkill_ProjectLevel(t *testing.T) {
 	err := InitWithSkill(tmpDir, SkillLocationProject)
 	require.NoError(t, err)
 
-	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
-	_, err = os.Stat(skillPath)
+	// Check adr skill
+	adrSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
+	_, err = os.Stat(adrSkillPath)
+	require.NoError(t, err)
+
+	// Check adr-review skill
+	adrReviewSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
+	_, err = os.Stat(adrReviewSkillPath)
 	require.NoError(t, err)
 }
 
@@ -156,8 +162,14 @@ func TestInitWithSkill_UserLevel(t *testing.T) {
 	err = InitWithSkill(projectDir, SkillLocationUser)
 	require.NoError(t, err)
 
-	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
-	_, err = os.Stat(skillPath)
+	// Check adr skill
+	adrSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
+	_, err = os.Stat(adrSkillPath)
+	require.NoError(t, err)
+
+	// Check adr-review skill
+	adrReviewSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
+	_, err = os.Stat(adrReviewSkillPath)
 	require.NoError(t, err)
 }
 
@@ -167,8 +179,14 @@ func TestInitWithSkill_Skip(t *testing.T) {
 	err := InitWithSkill(tmpDir, SkillLocationSkip)
 	require.NoError(t, err)
 
-	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
-	_, err = os.Stat(skillPath)
+	// Verify adr skill was NOT created
+	adrSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
+	_, err = os.Stat(adrSkillPath)
+	assert.True(t, os.IsNotExist(err))
+
+	// Verify adr-review skill was NOT created
+	adrReviewSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
+	_, err = os.Stat(adrReviewSkillPath)
 	assert.True(t, os.IsNotExist(err))
 }
 
