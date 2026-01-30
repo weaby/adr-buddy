@@ -131,3 +131,54 @@ func TestInit_InvalidDirectory(t *testing.T) {
 	err := Init("/nonexistent/path/that/does/not/exist")
 	assert.Error(t, err)
 }
+
+func TestInitWithSkill_ProjectLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	err := InitWithSkill(tmpDir, SkillLocationProject)
+	require.NoError(t, err)
+
+	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
+	_, err = os.Stat(skillPath)
+	require.NoError(t, err)
+}
+
+func TestInitWithSkill_UserLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	projectDir := filepath.Join(tmpDir, "project")
+	err := os.MkdirAll(projectDir, 0755)
+	require.NoError(t, err)
+
+	err = InitWithSkill(projectDir, SkillLocationUser)
+	require.NoError(t, err)
+
+	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
+	_, err = os.Stat(skillPath)
+	require.NoError(t, err)
+}
+
+func TestInitWithSkill_Skip(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	err := InitWithSkill(tmpDir, SkillLocationSkip)
+	require.NoError(t, err)
+
+	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr.md")
+	_, err = os.Stat(skillPath)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestInit_StillWorksWithoutSkill(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	err := Init(tmpDir)
+	require.NoError(t, err)
+
+	adrDir := filepath.Join(tmpDir, ".adr-buddy")
+	_, err = os.Stat(adrDir)
+	require.NoError(t, err)
+}

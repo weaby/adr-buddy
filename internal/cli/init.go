@@ -8,11 +8,25 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/weaby/adr-buddy/internal/config"
+	"github.com/weaby/adr-buddy/internal/skill"
 	"github.com/weaby/adr-buddy/internal/template"
+)
+
+type SkillLocation int
+
+const (
+	SkillLocationSkip SkillLocation = iota
+	SkillLocationProject
+	SkillLocationUser
 )
 
 // Init initializes the .adr-buddy directory with default config and template
 func Init(rootDir string) error {
+	return InitWithSkill(rootDir, SkillLocationSkip)
+}
+
+// InitWithSkill initializes .adr-buddy directory and optionally installs Claude Code skill
+func InitWithSkill(rootDir string, skillLocation SkillLocation) error {
 	// Verify root directory exists
 	if _, err := os.Stat(rootDir); os.IsNotExist(err) {
 		return fmt.Errorf("directory does not exist: %s", rootDir)
@@ -45,6 +59,21 @@ func Init(rootDir string) error {
 		return []byte(template.DefaultTemplate()), nil
 	}); err != nil {
 		return err
+	}
+
+	// Install Claude Code skill if requested
+	switch skillLocation {
+	case SkillLocationProject:
+		if err := skill.InstallProjectLevel(rootDir); err != nil {
+			return fmt.Errorf("failed to install skill: %w", err)
+		}
+		fmt.Println("Installed Claude Code skill:", filepath.Join(rootDir, ".claude", "skills", "adr.md"))
+	case SkillLocationUser:
+		if err := skill.InstallUserLevel(); err != nil {
+			return fmt.Errorf("failed to install skill: %w", err)
+		}
+		homeDir, _ := os.UserHomeDir()
+		fmt.Println("Installed Claude Code skill:", filepath.Join(homeDir, ".claude", "skills", "adr.md"))
 	}
 
 	fmt.Println("Initialized .adr-buddy directory successfully!")
