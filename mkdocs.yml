@@ -34,4 +34,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
+  - Annotations: annotations.md
+  - Configuration: configuration.md
+  - Claude Code: claude-code.md
+  - Commands: commands.md
   - GitHub Actions: github-actions.md
