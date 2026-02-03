@@ -12,12 +12,43 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const DefaultTemplate = `# {{ .ID | upper }}: {{ .Name }}
+
+## Context
+
+{{ .Context | default "[Why this decision was needed]" }}
+
+## Decision
+
+{{ .Decision | default "[What was decided]" }}
+
+## Alternatives Considered
+
+{{ .Alternatives | default "[Other options that were considered]" }}
+
+## Consequences
+
+{{ .Consequences | default "**Positive:** [Benefits]\n**Negative:** [Drawbacks]" }}
+`
+
 type Writer struct {
 	rootDir string
 }
 
 func NewWriter(rootDir string) *Writer {
 	return &Writer{rootDir: rootDir}
+}
+
+func (w *Writer) TemplatePath() string {
+	return filepath.Join(w.rootDir, ".adr-buddy", "template.md")
+}
+
+func (w *Writer) loadTemplate() string {
+	data, err := os.ReadFile(w.TemplatePath())
+	if err != nil {
+		return DefaultTemplate
+	}
+	return string(data)
 }
 
 func (w *Writer) DecisionsDir() string {
@@ -33,7 +64,7 @@ func (w *Writer) WriteADR(adr *ADR) error {
 		return fmt.Errorf("failed to create decisions directory: %w", err)
 	}
 
-	content, err := RenderADR(adr)
+	content, err := RenderADR(adr, w.loadTemplate())
 	if err != nil {
 		return fmt.Errorf("failed to render ADR: %w", err)
 	}
@@ -48,7 +79,7 @@ func (w *Writer) WriteADR(adr *ADR) error {
 	return nil
 }
 
-func RenderADR(adr *ADR) (string, error) {
+func RenderADR(adr *ADR, tmplStr string) (string, error) {
 	var buf bytes.Buffer
 
 	buf.WriteString("---\n")
@@ -84,25 +115,6 @@ func RenderADR(adr *ADR) (string, error) {
 	buf.Write(yamlData)
 	buf.WriteString("---\n\n")
 
-	tmpl := `# {{ .ID | upper }}: {{ .Name }}
-
-## Context
-
-{{ .Context | default "[Why this decision was needed]" }}
-
-## Decision
-
-{{ .Decision | default "[What was decided]" }}
-
-## Alternatives Considered
-
-{{ .Alternatives | default "[Other options that were considered]" }}
-
-## Consequences
-
-{{ .Consequences | default "**Positive:** [Benefits]\n**Negative:** [Drawbacks]" }}
-`
-
 	funcMap := template.FuncMap{
 		"upper": strings.ToUpper,
 		"default": func(def, val string) string {
@@ -113,7 +125,7 @@ func RenderADR(adr *ADR) (string, error) {
 		},
 	}
 
-	t, err := template.New("adr").Funcs(funcMap).Parse(tmpl)
+	t, err := template.New("adr").Funcs(funcMap).Parse(tmplStr)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}

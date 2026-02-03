@@ -7,6 +7,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const DefaultYAML = `# adr-buddy configuration
+decisions_dir: .claude/rules/decisions
+strict_mode: false
+`
+
 type Config struct {
 	DecisionsDir string `yaml:"decisions_dir"`
 	StrictMode   bool   `yaml:"strict_mode"`

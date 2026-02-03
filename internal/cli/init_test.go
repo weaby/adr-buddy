@@ -20,6 +20,38 @@ func TestInit_CreatesDecisionsDirectory(t *testing.T) {
 	assert.True(t, info.IsDir())
 }
 
+func TestInit_CreatesConfigAndTemplate(t *testing.T) {
+	tmpDir := t.TempDir()
+	err := Init(tmpDir)
+	require.NoError(t, err)
+
+	configPath := filepath.Join(tmpDir, ".adr-buddy", "config.yml")
+	content, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "decisions_dir")
+
+	templatePath := filepath.Join(tmpDir, ".adr-buddy", "template.md")
+	content, err = os.ReadFile(templatePath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "## Context")
+	assert.Contains(t, string(content), "## Decision")
+}
+
+func TestInit_DoesNotOverwriteExistingConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	configDir := filepath.Join(tmpDir, ".adr-buddy")
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte("custom: true\n"), 0644))
+
+	err := Init(tmpDir)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(filepath.Join(configDir, "config.yml"))
+	require.NoError(t, err)
+	assert.Equal(t, "custom: true\n", string(content))
+}
+
 func TestInit_CreatesIndexFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	err := Init(tmpDir)

@@ -3,7 +3,9 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/weaby/adr-buddy/internal/config"
 	"github.com/weaby/adr-buddy/internal/context"
 	"github.com/weaby/adr-buddy/internal/skill"
 )
@@ -23,6 +25,27 @@ func Init(rootDir string) error {
 func InitWithSkill(rootDir string, skillLocation SkillLocation) error {
 	if _, err := os.Stat(rootDir); os.IsNotExist(err) {
 		return fmt.Errorf("directory does not exist: %s", rootDir)
+	}
+
+	configDir := filepath.Join(rootDir, ".adr-buddy")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .adr-buddy directory: %w", err)
+	}
+
+	configPath := filepath.Join(configDir, "config.yml")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		if err := os.WriteFile(configPath, []byte(config.DefaultYAML), 0644); err != nil {
+			return fmt.Errorf("failed to write config.yml: %w", err)
+		}
+		fmt.Println("Created config:", configPath)
+	}
+
+	templatePath := filepath.Join(configDir, "template.md")
+	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		if err := os.WriteFile(templatePath, []byte(context.DefaultTemplate), 0644); err != nil {
+			return fmt.Errorf("failed to write template.md: %w", err)
+		}
+		fmt.Println("Created template:", templatePath)
 	}
 
 	writer := context.NewWriter(rootDir)

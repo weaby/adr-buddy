@@ -24,17 +24,14 @@ func TestRenderADR(t *testing.T) {
 		Consequences: "Good performance.",
 	}
 
-	content, err := RenderADR(adr)
+	content, err := RenderADR(adr, DefaultTemplate)
 	require.NoError(t, err)
 
-	// Check frontmatter
 	assert.Contains(t, content, "adr_id: adr-001")
 	assert.Contains(t, content, "name: Use PostgreSQL")
 	assert.Contains(t, content, "status: accepted")
 	assert.Contains(t, content, "category: infrastructure")
 	assert.Contains(t, content, "date: \"2024-01-15\"")
-
-	// Check markdown body
 	assert.Contains(t, content, "# ADR-001: Use PostgreSQL")
 	assert.Contains(t, content, "## Context")
 	assert.Contains(t, content, "We need a database.")
@@ -48,18 +45,38 @@ func TestRenderADR_DefaultValues(t *testing.T) {
 		Name: "Test Decision",
 	}
 
-	content, err := RenderADR(adr)
+	content, err := RenderADR(adr, DefaultTemplate)
 	require.NoError(t, err)
 
-	// Check default status
 	assert.Contains(t, content, "status: proposed")
-
-	// Check default date is set (format YYYY-MM-DD)
 	assert.Regexp(t, `date: "\d{4}-\d{2}-\d{2}"`, content)
-
-	// Check placeholder text for empty sections
 	assert.Contains(t, content, "[Why this decision was needed]")
 	assert.Contains(t, content, "[What was decided]")
+}
+
+func TestRenderADR_CustomTemplate(t *testing.T) {
+	adr := &ADR{
+		ID:       "adr-001",
+		Name:     "Test Decision",
+		Status:   "accepted",
+		Date:     "2024-01-15",
+		Decision: "We decided X.",
+	}
+
+	customTmpl := `# {{ .ID | upper }}: {{ .Name }}
+
+## Decision
+
+{{ .Decision | default "[TBD]" }}
+`
+
+	content, err := RenderADR(adr, customTmpl)
+	require.NoError(t, err)
+
+	assert.Contains(t, content, "# ADR-001: Test Decision")
+	assert.Contains(t, content, "We decided X.")
+	assert.NotContains(t, content, "## Context")
+	assert.NotContains(t, content, "## Alternatives")
 }
 
 func TestGenerateFilename(t *testing.T) {
@@ -108,6 +125,39 @@ func TestWriter_WriteADR(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "adr_id: adr-001")
 	assert.Contains(t, string(content), "Test context")
+}
+
+func TestWriter_WriteADR_CustomTemplate(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	tmplDir := filepath.Join(tmpDir, ".adr-buddy")
+	require.NoError(t, os.MkdirAll(tmplDir, 0755))
+
+	customTmpl := `# {{ .ID | upper }}: {{ .Name }}
+
+## Decision
+
+{{ .Decision | default "[TBD]" }}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(tmplDir, "template.md"), []byte(customTmpl), 0644))
+
+	writer := NewWriter(tmpDir)
+	adr := &ADR{
+		ID:       "adr-001",
+		Name:     "Custom Template Test",
+		Status:   "accepted",
+		Date:     "2024-01-15",
+		Decision: "We use custom templates.",
+	}
+
+	err := writer.WriteADR(adr)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(filepath.Join(tmpDir, ".claude", "rules", "decisions", "adr-001-custom-template-test.md"))
+	require.NoError(t, err)
+
+	assert.Contains(t, string(content), "We use custom templates.")
+	assert.NotContains(t, string(content), "## Context")
 }
 
 func TestNewADR(t *testing.T) {
@@ -178,7 +228,7 @@ func TestWriter_EnsureDecisionsDir(t *testing.T) {
 func TestFilenameLength(t *testing.T) {
 	longName := strings.Repeat("a", 100)
 	filename := generateFilename("adr-001", longName)
-	
+
 	// Should be truncated but still valid
 	assert.True(t, len(filename) < 70)
 	assert.True(t, strings.HasPrefix(filename, "adr-001-"))
