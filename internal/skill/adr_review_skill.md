@@ -25,10 +25,12 @@ Before starting:
    test -d .claude/rules/decisions && echo "Ready" || echo "Run: adr-buddy init"
    ```
 
-2. Read `.adr-buddy/config.yml` to find:
+2. **Read `.adr-buddy/template.md`** — this is the authoritative template for ADR structure. You MUST use the exact sections and placeholders defined in the template when drafting ADRs. If the user has customized it (added sections, changed fields), follow their template exactly.
+
+3. Read `.adr-buddy/config.yml` to find:
    - `decisions_dir` - where ADR files are stored
 
-3. Check existing ADRs:
+4. Check existing ADRs:
    ```bash
    adr-buddy list
    ```
@@ -82,6 +84,52 @@ Scan these files to discover technology choices:
 - Category (database, cache, framework, library, etc.)
 - Source file where found
 - Usage context (e.g., "docker-compose service" or "direct dependency")
+
+**Version Analysis:**
+
+After discovering technologies, scan for version choices that should be documented as decisions. These are often implicit decisions that deserve explicit documentation.
+
+*What to scan:*
+
+| Source | What to look for | How to detect |
+|--------|-----------------|---------------|
+| `Dockerfile` | Base image versions (`FROM node:18`, `FROM eclipse-temurin:17`) | `grep -E "^FROM " Dockerfile` |
+| `docker-compose.yml` | Service image tags (`postgres:15`, `redis:latest`) | `grep "image:" docker-compose.yml` |
+| `.github/workflows/*.yml` | Runtime versions (`java-version: '17'`, `node-version: '18'`) | `grep -E "(java|node|python|go)-version" .github/workflows/*.yml` |
+| `go.mod` | Go version (`go 1.21`) | `grep "^go " go.mod` |
+| `package.json` | Node engine constraint (`"engines": {"node": ">=18"}`) | Read `engines` field |
+| `pom.xml` / `build.gradle` | JVM target version, source compatibility | `grep -E "source|target|java.version" pom.xml build.gradle*` |
+| `.tool-versions` | Runtime versions (asdf) | `cat .tool-versions` |
+| `.node-version` / `.python-version` / `.java-version` | Pinned runtime versions | Read file contents |
+| `tsconfig.json` | TypeScript target (`"target": "ES2022"`) | Read `compilerOptions.target` |
+
+*Flag these version issues:*
+
+| Issue | Example | Recommendation |
+|-------|---------|----------------|
+| `:latest` tags | `postgres:latest`, `node:latest` | Pin to specific version for reproducibility |
+| Non-LTS runtime versions | JVM 17 (LTS: 21), Node 18 (LTS: 22) | Document why not on current LTS, or plan upgrade |
+| End-of-life versions | Python 3.8, Node 16, JVM 11 | Flag as deprecated, recommend upgrade path |
+| Unpinned minor versions | `FROM node:22` vs `FROM node:22.11` | Consider pinning for reproducible builds |
+| Pre-release / RC versions | `go 1.24rc1`, `python:3.13-rc` | Document why using pre-release |
+
+*Current LTS versions to check against (web search to confirm):*
+
+| Runtime | Current LTS | Previous LTS | EOL soon |
+|---------|-------------|--------------|----------|
+| **JVM** | 21 | 17 (until 2026-09) | 11 (EOL) |
+| **Node.js** | 22 | 20 (until 2026-04) | 18 (EOL 2025-04) |
+| **Python** | 3.12 / 3.13 | 3.11 | 3.9 (EOL 2025-10) |
+| **Go** | 1.23 / 1.24 | — | 1.21 (EOL) |
+| **.NET** | 9.0 | 8.0 (LTS until 2026-11) | 6.0 (EOL) |
+
+**IMPORTANT:** Always web search "[runtime] LTS schedule [current year]" to confirm — these dates shift. Do NOT rely on the table above as the source of truth.
+
+*For each version issue, record:*
+- Technology and current version
+- Source file where found
+- Issue type (`:latest`, non-LTS, EOL, unpinned)
+- Current LTS version (from web search)
 
 ### Level 2: Structural Patterns
 
@@ -141,6 +189,10 @@ Dependencies ([count])
  - [name] ([category])
  - ...
 
+Version Issues ([count])
+ - [technology] [current version] — [issue type]: [recommendation]
+ - ...
+
 Structural Patterns ([count])  [only if Level 2+]
  - [pattern name] ([evidence folders])
  - ...
@@ -152,12 +204,21 @@ Code Patterns ([count])  [only if Level 3]
 Already documented: [N] decisions ([list IDs])
 ```
 
+**Version issues example:**
+
+```
+Version Issues (3)
+ - postgres:latest in docker-compose.yml — :latest tag: pin to postgres:16
+ - JVM 17 in Dockerfile — non-LTS: current LTS is 21
+ - Node 18 in .github/workflows/ci.yml — EOL: reached end-of-life April 2025
+```
+
 **Filtering:**
 - Check existing ADR files in decisions directory
 - Mark already-documented items and exclude from count
 
 **Then ask:**
-"Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies'."
+"Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies' or 'just the version issues'."
 
 ## Step 4: Draft ADRs
 
@@ -174,6 +235,8 @@ For each decision:
 Use what you find to write the draft. Do NOT ask the user "why did you choose X?" — infer it from evidence and let them correct you.
 
 ### 4.2 Write a Complete Draft
+
+**IMPORTANT:** Use the sections from `.adr-buddy/template.md` as the structure. The example below shows the default sections — if the user's template has different or additional sections, follow theirs instead.
 
 For each decision, write a full ADR draft with all sections filled in:
 
@@ -212,7 +275,15 @@ you found in the codebase.]
 
 **Positive:** [Infer from how it's used — what does it enable?]
 **Negative:** [Infer from common trade-offs for this technology]
+
+## References
+
+- `path/to/file.go` — [What this file does in relation to the decision]
+- `path/to/config.yaml` — [Configuration for this technology]
+- `path/to/other.go` — [Other affected code]
 ```
+
+**References section:** List every file where the technology is used, configured, or imported. Include a short description of what each file does in relation to the decision. Search the codebase for imports, config references, and usage to build this list — don't guess.
 
 ### 4.3 Present for Review
 

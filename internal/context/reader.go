@@ -24,6 +24,7 @@ type ADR struct {
 	Decision     string
 	Alternatives string
 	Consequences string
+	References   string
 
 	FilePath string `yaml:"-"`
 }
@@ -181,6 +182,8 @@ func parseMarkdownSections(adr *ADR, body []byte) {
 			adr.Alternatives = sectionContent
 		case strings.Contains(headerLower, "consequence"):
 			adr.Consequences = sectionContent
+		case strings.Contains(headerLower, "reference"):
+			adr.References = sectionContent
 		}
 	}
 }

@@ -29,6 +29,10 @@ const DefaultTemplate = `# {{ .ID | upper }}: {{ .Name }}
 ## Consequences
 
 {{ .Consequences | default "**Positive:** [Benefits]\n**Negative:** [Drawbacks]" }}
+
+## References
+
+{{ .References | default "[Affected files and relevant code locations]" }}
 `
 
 type Writer struct {
@@ -145,6 +149,7 @@ func RenderADR(adr *ADR, tmplStr string) (string, error) {
 		"Decision":     adr.Decision,
 		"Alternatives": adr.Alternatives,
 		"Consequences": adr.Consequences,
+		"References":   adr.References,
 		"FilePath":     adr.FilePath,
 	}
 

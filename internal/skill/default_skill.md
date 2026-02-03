@@ -35,10 +35,10 @@ Do NOT skip this step. Do NOT wait to be asked.
 
 ## Before Creating ADRs
 
-1. Check `.adr-buddy/config.yml` for:
-   - `decisions_dir` - where ADR files are stored (default: `.claude/rules/decisions`)
+1. **Read `.adr-buddy/template.md`** — this is the authoritative template for ADR structure. The user may have customized sections, added fields, or changed placeholders. You MUST follow it exactly when filling in ADR content. If the template has custom sections (e.g., "Locations", "Impact"), fill those in too.
 
-2. The ADR template is in `.adr-buddy/template.md`. This defines the structure for new ADRs.
+2. Check `.adr-buddy/config.yml` for:
+   - `decisions_dir` - where ADR files are stored (default: `.claude/rules/decisions`)
 
 3. Check existing decisions to find the next ID and avoid duplicates:
    ```bash
@@ -68,6 +68,9 @@ ADRs are markdown files with YAML frontmatter, stored in `.claude/rules/decision
 | **Decision** | WHAT was decided |
 | **Alternatives Considered** | Other options and why they were rejected |
 | **Consequences** | Trade-offs, what becomes easier/harder |
+| **References** | Affected files and relevant code locations |
+
+**Note:** The template in `.adr-buddy/template.md` may define additional or different sections. Always follow the template.
 
 ## Creating an ADR
 
@@ -117,6 +120,14 @@ Use Apache Kafka over SQS or RabbitMQ. Configure with 3 partitions and
 **Positive:** Enables event replay and multi-consumer patterns. 7-day
 retention allows debugging historical issues.
 **Negative:** Requires Kafka expertise on team. Adds operational complexity.
+
+## References
+
+- `internal/payments/event_publisher.go` — Kafka producer setup
+- `internal/payments/event_consumer.go` — Consumer group configuration
+- `internal/analytics/payment_listener.go` — Analytics consumer
+- `deployments/kafka.yaml` — Kafka cluster configuration
+- `docker-compose.yml` — Local Kafka service definition
 ```
 
 ## Good vs Bad ADRs
