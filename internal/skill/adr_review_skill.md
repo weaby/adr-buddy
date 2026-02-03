@@ -22,16 +22,15 @@ Before starting:
 
 1. Verify adr-buddy is initialized:
    ```bash
-   test -f .adr-buddy/config.yml && echo "Ready" || echo "Run: adr-buddy init"
+   test -d .claude/rules/decisions && echo "Ready" || echo "Run: adr-buddy init"
    ```
 
 2. Read `.adr-buddy/config.yml` to find:
-   - `output_dir` - where ADR files are stored
-   - `scan_paths` - directories to analyze
+   - `decisions_dir` - where ADR files are stored
 
-3. Find the next available ADR ID:
+3. Check existing ADRs:
    ```bash
-   ls -1 decisions/ 2>/dev/null | grep -E '^adr-[0-9]+' | sort -V | tail -1
+   adr-buddy list
    ```
 
 ## Step 1: Choose Analysis Depth
@@ -125,19 +124,6 @@ In addition to Levels 1-2, analyze code for design patterns:
 | Observer/Pub-Sub | Search for Subscribe/Publish patterns | `Subscribe\(`, `Publish\(`, `EventEmitter` |
 | Middleware Chain | Search for middleware patterns | `func.*Middleware`, `app.use\(` |
 
-**Detection Commands:**
-
-```bash
-# Repository pattern (Go)
-grep -r "Repository interface" --include="*.go" | head -5
-
-# Dependency injection (constructor with interface params)
-grep -rn "func New" --include="*.go" | grep -E "\(.*[A-Z][a-z]+er\)" | head -5
-
-# Middleware (various languages)
-grep -rn "middleware\|Middleware" --include="*.go" --include="*.ts" --include="*.js" | head -5
-```
-
 **For each detected pattern, record:**
 - Pattern name
 - Example file and line
@@ -167,8 +153,7 @@ Already documented: [N] decisions ([list IDs])
 ```
 
 **Filtering:**
-- Check existing `@decision.id` annotations in codebase
-- Check existing ADR files in output directory
+- Check existing ADR files in decisions directory
 - Mark already-documented items and exclude from count
 
 **Then ask:**
@@ -203,10 +188,6 @@ I've researched alternatives and considerations:
 - [Factor 3]
 ```
 
-**Research Scope:**
-- For common technologies: Use knowledge + brief web search to confirm current status
-- For obscure/newer tools: More thorough web search for alternatives and community status
-
 ## Step 5: Guided Documentation Conversation
 
 For each selected decision, follow this conversation flow:
@@ -221,7 +202,7 @@ Show the alternatives and considerations you researched.
 Why did you choose [TECHNOLOGY] for this project?
 ```
 
-Wait for response. This becomes the core of `@decision.context` and `@decision.decision`.
+Wait for response. This becomes the core of the Context and Decision sections.
 
 ### 5.3 Explore Constraints
 
@@ -230,7 +211,7 @@ What constraints or factors influenced this decision?
 (e.g., team expertise, performance requirements, existing infrastructure, cost, timeline)
 ```
 
-Wait for response. This enriches `@decision.context`.
+Wait for response. This enriches the Context section.
 
 ### 5.4 Capture Trade-offs
 
@@ -238,7 +219,7 @@ Wait for response. This enriches `@decision.context`.
 Any trade-offs or concerns you're aware of with this choice?
 ```
 
-Wait for response. This becomes `@decision.consequences`.
+Wait for response. This becomes the Consequences section.
 
 ### 5.5 Confirm Alternatives
 
@@ -247,73 +228,64 @@ From the alternatives I listed, were any of these seriously considered?
 [List the alternatives you researched]
 ```
 
-Wait for response. This becomes `@decision.alternatives`.
+Wait for response. This becomes the Alternatives Considered section.
 
-### 5.6 Draft Annotation
+### 5.6 Draft ADR
 
-Synthesize all responses into a draft annotation:
+Synthesize all responses into a draft ADR file:
 
+```markdown
+---
+adr_id: adr-[NEXT_ID]
+name: [Short title from technology + category]
+status: accepted
+category: [category]
+date: "[YYYY-MM-DD]"
+globs:
+    - "[relevant file patterns]"
+---
+
+# ADR-[NEXT_ID]: [Short title]
+
+## Context
+
+[Synthesized from user's "why" and constraints]
+
+## Decision
+
+[What was chosen and key configuration]
+
+## Alternatives Considered
+
+- **[Alt 1]:** [Why not chosen]
+- **[Alt 2]:** [Why not chosen]
+
+## Consequences
+
+**Positive:** [Benefits]
+**Negative:** [From trade-offs discussion]
 ```
-Here's the ADR annotation I'll add:
 
-// @decision.id: adr-[NEXT_ID]
-// @decision.name: [Short title from technology + category]
-// @decision.status: accepted
-// @decision.context: [Synthesized from user's "why" and constraints]
-// @decision.decision: [What was chosen and key configuration]
-// @decision.alternatives:
-//   - [Alt 1]: [Why not chosen]
-//   - [Alt 2]: [Why not chosen]
-// @decision.consequences: [From trade-offs discussion]
+Show the draft and ask: "Does this look right? Any changes?"
 
-Does this look right? Any changes?
-```
+Wait for confirmation before writing the file.
 
-Wait for confirmation before proceeding.
+## Step 6: Create ADR Files
 
-## Step 6: Add Annotations
-
-### Placement Rules
-
-Add annotations at the most relevant location for each decision type:
-
-| Decision Type | Placement Strategy |
-|---------------|-------------------|
-| Database dependency | Connection/client initialization file |
-| Cache dependency | Cache client setup file |
-| Web framework | Main app entry point (main.go, app.ts, etc.) |
-| Library dependency | First significant import/usage |
-| Structural pattern | First file in the pattern (e.g., first service in /services) |
-| Code pattern | Primary example of the pattern |
-
-### Finding Placement Location
+For each confirmed decision:
 
 ```bash
-# For a dependency, find where it's imported/used
-grep -rn "import.*[package]" --include="*.go" --include="*.ts" --include="*.js" | head -3
-
-# For docker-compose services, the annotation goes in the connection code
-grep -rn "postgres\|redis\|mongo" --include="*.go" --include="*.ts" | head -3
+adr-buddy new "[Decision title]" --category [category]
 ```
 
-### Adding the Annotation
-
-Use the Edit tool to add the annotation comment block directly above the relevant code (import statement, function definition, or configuration).
-
-**Comment Style:**
-- Go, JS, TS, Java, C, Rust: `//`
-- Python, Ruby, YAML, Shell: `#`
+Then edit the generated file to fill in the sections with the content from Step 5.
 
 ## Step 7: Check for Duplicates
 
-Before adding each annotation, check for existing ADRs on the same topic:
+Before creating each ADR, check for existing ADRs on the same topic:
 
 ```bash
-# Search existing annotations
-grep -r "@decision" --include="*.go" --include="*.ts" --include="*.js" --include="*.py" | grep -i "[TECHNOLOGY]"
-
-# Search existing ADR files
-ls decisions/ 2>/dev/null | xargs -I {} grep -l "[TECHNOLOGY]" decisions/{} 2>/dev/null
+adr-buddy list | grep -i "[TECHNOLOGY]"
 ```
 
 **If duplicate found:**
@@ -332,23 +304,20 @@ Options:
 After all selected decisions are documented:
 
 ```bash
-# Validate annotations
+# Validate ADR files
 adr-buddy check
 
-# Generate/update ADR files
+# Regenerate the decisions index
 adr-buddy sync
 ```
 
 **Report completion:**
 ```
-Added [N] new decision annotations
+Created [N] new ADR files:
 
-Running `adr-buddy sync`...
-
-Generated:
-- decisions/adr-[ID].md ([Title])
-- decisions/adr-[ID].md ([Title])
+- .claude/rules/decisions/adr-[ID]-[name].md ([Title])
+- .claude/rules/decisions/adr-[ID]-[name].md ([Title])
 ...
 
-All decisions documented! The ADR files are ready for commit.
+Index updated. All decisions documented and ready for commit.
 ```

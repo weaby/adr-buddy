@@ -20,7 +20,7 @@ func TestInstallProjectLevel(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, string(content), "name: adr")
-	assert.Contains(t, string(content), "@decision.id")
+	assert.Contains(t, string(content), "adr_id")
 }
 
 func TestInstallUserLevel(t *testing.T) {
