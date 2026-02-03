@@ -159,128 +159,102 @@ Already documented: [N] decisions ([list IDs])
 **Then ask:**
 "Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies'."
 
-## Step 4: Research Alternatives
+## Step 4: Draft ADRs
 
-For each selected decision, research alternatives and considerations before asking the user.
+For each selected decision, **you** research and write a complete draft ADR. Do NOT ask open-ended questions. Instead, do the work and present a finished draft for approval.
 
-**Research Process:**
+### 4.1 Research (you do this silently)
 
-1. **Identify the category** - What problem does this technology solve?
-2. **Web search for alternatives** - Search: "[technology] alternatives [year]"
-3. **Gather selection criteria** - What factors matter when choosing in this category?
-4. **Summarize findings** - Present 3-5 alternatives with key differentiators
+For each decision:
 
-**Research Prompt Template:**
+1. **Web search** for "[technology] vs alternatives [year]" to find current alternatives
+2. **Analyze the codebase** for how the technology is used, configured, and integrated
+3. **Infer the context** from the project structure, config files, and usage patterns
 
-```
-I'll document your choice of [TECHNOLOGY] for [CATEGORY].
+Use what you find to write the draft. Do NOT ask the user "why did you choose X?" — infer it from evidence and let them correct you.
 
-I've researched alternatives and considerations:
+### 4.2 Write a Complete Draft
 
-**Alternatives:**
-- [Alt 1] - [Key differentiator, trade-off]
-- [Alt 2] - [Key differentiator, trade-off]
-- [Alt 3] - [Key differentiator, trade-off]
-
-**Key considerations for [CATEGORY] selection:**
-- [Factor 1]
-- [Factor 2]
-- [Factor 3]
-```
-
-## Step 5: Guided Documentation Conversation
-
-For each selected decision, follow this conversation flow:
-
-### 5.1 Present Research (from Step 4)
-
-Show the alternatives and considerations you researched.
-
-### 5.2 Ask "Why"
-
-```
-Why did you choose [TECHNOLOGY] for this project?
-```
-
-Wait for response. This becomes the core of the Context and Decision sections.
-
-### 5.3 Explore Constraints
-
-```
-What constraints or factors influenced this decision?
-(e.g., team expertise, performance requirements, existing infrastructure, cost, timeline)
-```
-
-Wait for response. This enriches the Context section.
-
-### 5.4 Capture Trade-offs
-
-```
-Any trade-offs or concerns you're aware of with this choice?
-```
-
-Wait for response. This becomes the Consequences section.
-
-### 5.5 Confirm Alternatives
-
-```
-From the alternatives I listed, were any of these seriously considered?
-[List the alternatives you researched]
-```
-
-Wait for response. This becomes the Alternatives Considered section.
-
-### 5.6 Draft ADR
-
-Synthesize all responses into a draft ADR file:
+For each decision, write a full ADR draft with all sections filled in:
 
 ```markdown
 ---
 adr_id: adr-[NEXT_ID]
-name: [Short title from technology + category]
+name: [Short title]
 status: accepted
 category: [category]
 date: "[YYYY-MM-DD]"
 globs:
-    - "[relevant file patterns]"
+    - "[relevant file patterns based on where technology is used]"
 ---
 
 # ADR-[NEXT_ID]: [Short title]
 
 ## Context
 
-[Synthesized from user's "why" and constraints]
+[Write 2-4 sentences based on what you found in the codebase.
+What problem does this solve? What requirements drove this choice?
+Infer from usage patterns, config, and project structure.]
 
 ## Decision
 
-[What was chosen and key configuration]
+[Write 1-3 sentences. What was chosen and how is it configured?
+Be specific — reference actual config values, versions, or patterns
+you found in the codebase.]
 
 ## Alternatives Considered
 
-- **[Alt 1]:** [Why not chosen]
-- **[Alt 2]:** [Why not chosen]
+- **[Alt 1]:** [Why it's a reasonable alternative, why not chosen — infer from project context]
+- **[Alt 2]:** [Same]
+- **[Alt 3]:** [Same]
 
 ## Consequences
 
-**Positive:** [Benefits]
-**Negative:** [From trade-offs discussion]
+**Positive:** [Infer from how it's used — what does it enable?]
+**Negative:** [Infer from common trade-offs for this technology]
 ```
 
-Show the draft and ask: "Does this look right? Any changes?"
+### 4.3 Present for Review
 
-Wait for confirmation before writing the file.
+Present the draft and ask ONE structured question:
 
-## Step 6: Create ADR Files
+```
+Here's the draft ADR for [TECHNOLOGY]:
 
-For each confirmed decision:
+[Show full draft]
 
-```bash
-adr-buddy new "[Decision title]" --category [category]
+What would you like to change?
+1. Looks good — create it
+2. Edit context/reasoning (I'll explain what to change)
+3. Different alternatives were considered
+4. Skip this one
 ```
 
-Then edit the generated file to fill in the sections with the content from Step 5.
+**IMPORTANT:** Always present a complete, ready-to-save draft. Never present a skeleton with `[fill in]` placeholders. The user should only need to approve or make small corrections.
 
-## Step 7: Check for Duplicates
+### 4.4 Apply Corrections
+
+If the user picks option 2 or 3:
+- Apply their feedback to the draft
+- Show the updated version
+- Ask again: "Updated. Ready to create, or more changes?"
+
+Limit to 2 revision rounds. If still not right after 2 rounds, create the file and let the user edit it directly.
+
+## Step 5: Create ADR Files
+
+For each approved decision:
+
+1. Create the file:
+   ```bash
+   adr-buddy new "[Decision title]" --category [category]
+   ```
+
+2. Replace the generated template content with the approved draft content by editing the file directly.
+
+3. Move to the next decision immediately — don't wait for additional confirmation.
+
+## Step 6: Check for Duplicates
 
 Before creating each ADR, check for existing ADRs on the same topic:
 
@@ -299,7 +273,7 @@ Options:
 3. Create new - this is a different aspect of the same technology
 ```
 
-## Step 8: Sync and Complete
+## Step 7: Sync and Complete
 
 After all selected decisions are documented:
 

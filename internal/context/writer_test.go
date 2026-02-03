@@ -79,6 +79,26 @@ func TestRenderADR_CustomTemplate(t *testing.T) {
 	assert.NotContains(t, content, "## Alternatives")
 }
 
+func TestRenderADR_UnknownFields(t *testing.T) {
+	adr := &ADR{
+		ID:   "adr-001",
+		Name: "Test",
+		Date: "2024-01-15",
+	}
+
+	tmpl := `# {{ .ID | upper }}: {{ .Name }}
+
+## Locations
+
+{{ .Locations | default "[Affected locations]" }}
+`
+
+	content, err := RenderADR(adr, tmpl)
+	require.NoError(t, err)
+
+	assert.Contains(t, content, "[Affected locations]")
+}
+
 func TestGenerateFilename(t *testing.T) {
 	tests := []struct {
 		id       string

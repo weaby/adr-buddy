@@ -117,20 +117,38 @@ func RenderADR(adr *ADR, tmplStr string) (string, error) {
 
 	funcMap := template.FuncMap{
 		"upper": strings.ToUpper,
-		"default": func(def, val string) string {
-			if val == "" {
+		"default": func(def string, val interface{}) string {
+			if val == nil {
 				return def
 			}
-			return val
+			s, ok := val.(string)
+			if !ok || s == "" {
+				return def
+			}
+			return s
 		},
 	}
 
-	t, err := template.New("adr").Funcs(funcMap).Parse(tmplStr)
+	t, err := template.New("adr").Funcs(funcMap).Option("missingkey=zero").Parse(tmplStr)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	if err := t.Execute(&buf, adr); err != nil {
+	data := map[string]interface{}{
+		"ID":           adr.ID,
+		"Name":         adr.Name,
+		"Status":       adr.Status,
+		"Category":     adr.Category,
+		"Date":         adr.Date,
+		"Globs":        adr.Globs,
+		"Context":      adr.Context,
+		"Decision":     adr.Decision,
+		"Alternatives": adr.Alternatives,
+		"Consequences": adr.Consequences,
+		"FilePath":     adr.FilePath,
+	}
+
+	if err := t.Execute(&buf, data); err != nil {
 		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
 
