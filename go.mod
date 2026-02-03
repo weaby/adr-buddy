@@ -3,7 +3,6 @@ module github.com/weaby/adr-buddy
 go 1.24
 
 require (
-	github.com/bmatcuk/doublestar/v4 v4.9.2
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1

@@ -6,43 +6,32 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := Default()
-
-	assert.Equal(t, ".", cfg.ScanPaths[0])
-	assert.Equal(t, "decisions", cfg.OutputDir)
+	assert.Equal(t, filepath.Join(".claude", "rules", "decisions"), cfg.DecisionsDir)
 	assert.False(t, cfg.StrictMode)
-	assert.Contains(t, cfg.Exclude, "**/node_modules/**")
-	assert.Contains(t, cfg.Exclude, "**/.git/**")
-	assert.Contains(t, cfg.Exclude, "**/vendor/**")
 }
 
 func TestLoad(t *testing.T) {
-	// Create temp directory
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, ".adr-buddy", "config.yml")
 
-	// Create .adr-buddy directory
-	err := os.MkdirAll(filepath.Dir(configPath), 0755)
-	assert.NoError(t, err)
+	configDir := filepath.Join(tmpDir, ".adr-buddy")
+	err := os.MkdirAll(configDir, 0755)
+	require.NoError(t, err)
 
-	// Write test config
-	configContent := `scan_paths:
-  - ./src
-  - ./lib
-output_dir: ./docs/decisions
+	configContent := `decisions_dir: custom/decisions
 strict_mode: true
 `
-	err = os.WriteFile(configPath, []byte(configContent), 0644)
-	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(configContent), 0644)
+	require.NoError(t, err)
 
-	// Load config
 	cfg, err := Load(tmpDir)
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"./src", "./lib"}, cfg.ScanPaths)
-	assert.Equal(t, "./docs/decisions", cfg.OutputDir)
+	require.NoError(t, err)
+
+	assert.Equal(t, "custom/decisions", cfg.DecisionsDir)
 	assert.True(t, cfg.StrictMode)
 }
 
@@ -50,9 +39,14 @@ func TestLoad_NoConfigFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	cfg, err := Load(tmpDir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// Should return default config
-	assert.Equal(t, Default().ScanPaths, cfg.ScanPaths)
-	assert.Equal(t, Default().OutputDir, cfg.OutputDir)
+	assert.Equal(t, Default().DecisionsDir, cfg.DecisionsDir)
+	assert.False(t, cfg.StrictMode)
+}
+
+func TestDecisionsPath(t *testing.T) {
+	cfg := Default()
+	path := cfg.DecisionsPath("/project")
+	assert.Equal(t, filepath.Join("/project", ".claude", "rules", "decisions"), path)
 }

@@ -12,9 +12,10 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "adr-buddy",
-	Short: "Generate Architecture Decision Records from code annotations",
-	Long: `adr-buddy is a CLI tool that scans your codebase for @decision annotations
-and automatically generates and maintains ADR documentation.`,
+	Short: "Manage Architecture Decision Records for AI-assisted development",
+	Long: `adr-buddy manages Architecture Decision Records (ADRs) stored as markdown files
+with YAML frontmatter in .claude/rules/decisions/. These context files help AI
+assistants understand your project's architectural decisions.`,
 }
 
 var initCmd = &cobra.Command{
@@ -64,25 +65,29 @@ func promptSkillLocation() cli.SkillLocation {
 	}
 }
 
+var newCmd = &cobra.Command{
+	Use:   "new <name>",
+	Short: "Create a new ADR",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		category, _ := cmd.Flags().GetString("category")
+		return cli.NewCommand(".", args[0], category)
+	},
+}
+
 var syncCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "Scan code and generate/update ADR files",
+	Short: "Regenerate the decisions index",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		watch, _ := cmd.Flags().GetBool("watch")
 		format, _ := cmd.Flags().GetString("format")
-
-		if watch {
-			return fmt.Errorf("watch mode not yet implemented")
-		}
-
 		return cli.SyncWithFormat(".", dryRun, format, os.Stdout)
 	},
 }
 
 var checkCmd = &cobra.Command{
 	Use:   "check",
-	Short: "Validate annotations without generating files",
+	Short: "Validate all ADR files",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		strict, _ := cmd.Flags().GetBool("strict")
 		format, _ := cmd.Flags().GetString("format")
@@ -92,7 +97,7 @@ var checkCmd = &cobra.Command{
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all discovered ADRs",
+	Short: "List all ADRs",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		category, _ := cmd.Flags().GetString("category")
 		return cli.ListCommand(".", category, nil)
@@ -102,8 +107,9 @@ var listCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().String("claude-skill", "", "Install Claude Code skill: project, user, or skip")
 
+	newCmd.Flags().String("category", "", "ADR category")
+
 	syncCmd.Flags().Bool("dry-run", false, "Show what would change without writing files")
-	syncCmd.Flags().Bool("watch", false, "Continuous mode (re-run on file changes)")
 	syncCmd.Flags().String("format", "text", "Output format: text or json")
 
 	checkCmd.Flags().Bool("strict", false, "Treat warnings as errors")
@@ -112,6 +118,7 @@ func init() {
 	listCmd.Flags().String("category", "", "Filter by category")
 
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(listCmd)

@@ -7,79 +7,109 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func createTestADR(t *testing.T, dir, filename, content string) {
+	t.Helper()
+	decisionsDir := filepath.Join(dir, ".claude", "rules", "decisions")
+	err := os.MkdirAll(decisionsDir, 0755)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(decisionsDir, filename), []byte(content), 0644)
+	require.NoError(t, err)
+}
 
 func TestListCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create test files
-	content1 := `// @decision.id: adr-1
-// @decision.name: First Decision
-// @decision.status: accepted
-`
-	content2 := `// @decision.id: adr-2
-// @decision.name: Second Decision
-// @decision.category: backend
-`
+	createTestADR(t, tmpDir, "adr-001-postgres.md", `---
+adr_id: adr-001
+name: Use PostgreSQL
+status: accepted
+category: infrastructure
+date: 2024-01-15
+---
 
-	err := os.WriteFile(filepath.Join(tmpDir, "test1.js"), []byte(content1), 0644)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(tmpDir, "test2.js"), []byte(content2), 0644)
-	assert.NoError(t, err)
+## Context
+
+We need a database.
+
+## Decision
+
+Use PostgreSQL.
+`)
+
+	createTestADR(t, tmpDir, "adr-002-api.md", `---
+adr_id: adr-002
+name: REST API Design
+status: proposed
+category: api
+date: 2024-01-16
+---
+
+## Decision
+
+Use REST.
+`)
 
 	var buf bytes.Buffer
-	err = ListCommand(tmpDir, "", &buf)
-	assert.NoError(t, err)
+	err := ListCommand(tmpDir, "", &buf)
+	require.NoError(t, err)
 
 	output := buf.String()
-	assert.Contains(t, output, "adr-1")
-	assert.Contains(t, output, "First Decision")
+	assert.Contains(t, output, "adr-001")
+	assert.Contains(t, output, "Use PostgreSQL")
 	assert.Contains(t, output, "accepted")
-	assert.Contains(t, output, "adr-2")
-	assert.Contains(t, output, "Second Decision")
-	assert.Contains(t, output, "backend")
+	assert.Contains(t, output, "infrastructure")
+	assert.Contains(t, output, "adr-002")
+	assert.Contains(t, output, "REST API Design")
 }
 
 func TestListCommand_CategoryFilter(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Create test files with different categories
-	contentBackend := `// @decision.id: adr-backend-1
-// @decision.name: Backend Decision
-// @decision.status: accepted
-// @decision.category: backend
-`
-	contentFrontend := `// @decision.id: adr-frontend-1
-// @decision.name: Frontend Decision
-// @decision.status: proposed
-// @decision.category: frontend
-`
-	contentNoCategory := `// @decision.id: adr-root-1
-// @decision.name: Root Decision
-// @decision.status: deprecated
-`
+	createTestADR(t, tmpDir, "adr-001-postgres.md", `---
+adr_id: adr-001
+name: Use PostgreSQL
+status: accepted
+category: infrastructure
+date: 2024-01-15
+---
 
-	err := os.WriteFile(filepath.Join(tmpDir, "backend.js"), []byte(contentBackend), 0644)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(tmpDir, "frontend.js"), []byte(contentFrontend), 0644)
-	assert.NoError(t, err)
-	err = os.WriteFile(filepath.Join(tmpDir, "root.js"), []byte(contentNoCategory), 0644)
-	assert.NoError(t, err)
+## Decision
 
-	// Test filtering for backend category
+Use PostgreSQL.
+`)
+
+	createTestADR(t, tmpDir, "adr-002-api.md", `---
+adr_id: adr-002
+name: REST API Design
+status: proposed
+category: api
+date: 2024-01-16
+---
+
+## Decision
+
+Use REST.
+`)
+
 	var buf bytes.Buffer
-	err = ListCommand(tmpDir, "backend", &buf)
-	assert.NoError(t, err)
+	err := ListCommand(tmpDir, "infrastructure", &buf)
+	require.NoError(t, err)
 
 	output := buf.String()
-	// Should contain backend ADR
-	assert.Contains(t, output, "adr-backend-1")
-	assert.Contains(t, output, "Backend Decision")
-	assert.Contains(t, output, "backend")
+	assert.Contains(t, output, "adr-001")
+	assert.Contains(t, output, "Use PostgreSQL")
+	assert.NotContains(t, output, "adr-002")
+}
 
-	// Should NOT contain frontend or root ADRs
-	assert.NotContains(t, output, "adr-frontend-1")
-	assert.NotContains(t, output, "Frontend Decision")
-	assert.NotContains(t, output, "adr-root-1")
-	assert.NotContains(t, output, "Root Decision")
+func TestListCommand_NoADRs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	var buf bytes.Buffer
+	err := ListCommand(tmpDir, "", &buf)
+	require.NoError(t, err)
+
+	assert.Contains(t, buf.String(), "No ADRs found")
 }
