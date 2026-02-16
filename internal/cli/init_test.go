@@ -7,196 +7,116 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
-
-	"github.com/weaby/adr-buddy/internal/config"
 )
 
-func TestInit_CreatesDirectory(t *testing.T) {
+func TestInit_CreatesDecisionsDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	err := Init(tmpDir)
 	require.NoError(t, err)
 
-	// Check .adr-buddy directory exists
-	adrDir := filepath.Join(tmpDir, ".adr-buddy")
-	info, err := os.Stat(adrDir)
+	decisionsDir := filepath.Join(tmpDir, ".claude", "rules", "decisions")
+	info, err := os.Stat(decisionsDir)
 	require.NoError(t, err)
 	assert.True(t, info.IsDir())
 }
 
-func TestInit_CreatesConfigFile(t *testing.T) {
+func TestInit_CreatesConfigAndTemplate(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	err := Init(tmpDir)
 	require.NoError(t, err)
 
-	// Check config.yml exists and is valid
 	configPath := filepath.Join(tmpDir, ".adr-buddy", "config.yml")
-	data, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath)
 	require.NoError(t, err)
+	assert.Contains(t, string(content), "decisions_dir")
 
-	// Parse YAML to verify it's valid
-	var cfg config.Config
-	err = yaml.Unmarshal(data, &cfg)
+	templatePath := filepath.Join(tmpDir, ".adr-buddy", "template.md")
+	content, err = os.ReadFile(templatePath)
 	require.NoError(t, err)
-
-	// Verify default values
-	expected := config.Default()
-	assert.Equal(t, expected.ScanPaths, cfg.ScanPaths)
-	assert.Equal(t, expected.OutputDir, cfg.OutputDir)
-	assert.Equal(t, expected.StrictMode, cfg.StrictMode)
-	assert.NotEmpty(t, cfg.Exclude)
+	assert.Contains(t, string(content), "## Context")
+	assert.Contains(t, string(content), "## Decision")
 }
 
-func TestInit_CreatesTemplateFile(t *testing.T) {
+func TestInit_DoesNotOverwriteExistingConfig(t *testing.T) {
 	tmpDir := t.TempDir()
+
+	configDir := filepath.Join(tmpDir, ".adr-buddy")
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yml"), []byte("custom: true\n"), 0644))
 
 	err := Init(tmpDir)
 	require.NoError(t, err)
 
-	// Check template.md exists
-	templatePath := filepath.Join(tmpDir, ".adr-buddy", "template.md")
-	data, err := os.ReadFile(templatePath)
+	content, err := os.ReadFile(filepath.Join(configDir, "config.yml"))
+	require.NoError(t, err)
+	assert.Equal(t, "custom: true\n", string(content))
+}
+
+func TestInit_CreatesIndexFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	err := Init(tmpDir)
 	require.NoError(t, err)
 
-	// Should contain template content
-	content := string(data)
-	assert.Contains(t, content, "{{.ID}}")
-	assert.Contains(t, content, "{{.Name}}")
-	assert.Contains(t, content, "{{.Status}}")
-	assert.Contains(t, content, "## Context")
-	assert.Contains(t, content, "## Decision")
-	assert.Contains(t, content, "## Consequences")
+	indexPath := filepath.Join(tmpDir, ".claude", "rules", "decisions", "decisions-index.md")
+	content, err := os.ReadFile(indexPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "# Architecture Decision Records")
 }
 
 func TestInit_IdempotentExecution(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Run init first time
 	err := Init(tmpDir)
 	require.NoError(t, err)
 
-	// Modify config file
-	configPath := filepath.Join(tmpDir, ".adr-buddy", "config.yml")
-	err = os.WriteFile(configPath, []byte("scan_paths: [\"custom\"]\n"), 0644)
-	require.NoError(t, err)
-
-	// Run init second time
+	// Running again should not error
 	err = Init(tmpDir)
 	require.NoError(t, err)
-
-	// Config should NOT be overwritten
-	data, err := os.ReadFile(configPath)
-	require.NoError(t, err)
-	assert.Contains(t, string(data), "custom")
-}
-
-func TestInit_PreservesExistingFiles(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create .adr-buddy directory manually
-	adrDir := filepath.Join(tmpDir, ".adr-buddy")
-	err := os.MkdirAll(adrDir, 0755)
-	require.NoError(t, err)
-
-	// Create custom config
-	configPath := filepath.Join(adrDir, "config.yml")
-	customConfig := "output_dir: custom\n"
-	err = os.WriteFile(configPath, []byte(customConfig), 0644)
-	require.NoError(t, err)
-
-	// Create custom template
-	templatePath := filepath.Join(adrDir, "template.md")
-	customTemplate := "# Custom Template\n"
-	err = os.WriteFile(templatePath, []byte(customTemplate), 0644)
-	require.NoError(t, err)
-
-	// Run init
-	err = Init(tmpDir)
-	require.NoError(t, err)
-
-	// Verify files were NOT overwritten
-	configData, err := os.ReadFile(configPath)
-	require.NoError(t, err)
-	assert.Equal(t, customConfig, string(configData))
-
-	templateData, err := os.ReadFile(templatePath)
-	require.NoError(t, err)
-	assert.Equal(t, customTemplate, string(templateData))
 }
 
 func TestInit_InvalidDirectory(t *testing.T) {
-	// Try to init in a non-existent directory
-	err := Init("/nonexistent/path/that/does/not/exist")
+	err := Init("/nonexistent/path")
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "does not exist")
 }
 
 func TestInitWithSkill_ProjectLevel(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	err := InitWithSkill(tmpDir, SkillLocationProject)
 	require.NoError(t, err)
 
-	// Check adr skill
-	adrSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
-	_, err = os.Stat(adrSkillPath)
-	require.NoError(t, err)
+	adrSkill := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
+	_, err = os.Stat(adrSkill)
+	assert.NoError(t, err)
 
-	// Check adr-review skill
-	adrReviewSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
-	_, err = os.Stat(adrReviewSkillPath)
-	require.NoError(t, err)
+	reviewSkill := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
+	_, err = os.Stat(reviewSkill)
+	assert.NoError(t, err)
 }
 
 func TestInitWithSkill_UserLevel(t *testing.T) {
 	tmpDir := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
+	t.Setenv("HOME", tmpDir)
 
-	projectDir := filepath.Join(tmpDir, "project")
-	err := os.MkdirAll(projectDir, 0755)
+	projectDir := t.TempDir()
+	err := InitWithSkill(projectDir, SkillLocationUser)
 	require.NoError(t, err)
 
-	err = InitWithSkill(projectDir, SkillLocationUser)
-	require.NoError(t, err)
+	adrSkill := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
+	_, err = os.Stat(adrSkill)
+	assert.NoError(t, err)
 
-	// Check adr skill
-	adrSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
-	_, err = os.Stat(adrSkillPath)
-	require.NoError(t, err)
-
-	// Check adr-review skill
-	adrReviewSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
-	_, err = os.Stat(adrReviewSkillPath)
-	require.NoError(t, err)
+	reviewSkill := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
+	_, err = os.Stat(reviewSkill)
+	assert.NoError(t, err)
 }
 
 func TestInitWithSkill_Skip(t *testing.T) {
 	tmpDir := t.TempDir()
-
 	err := InitWithSkill(tmpDir, SkillLocationSkip)
 	require.NoError(t, err)
 
-	// Verify adr skill was NOT created
-	adrSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
-	_, err = os.Stat(adrSkillPath)
+	adrSkill := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
+	_, err = os.Stat(adrSkill)
 	assert.True(t, os.IsNotExist(err))
-
-	// Verify adr-review skill was NOT created
-	adrReviewSkillPath := filepath.Join(tmpDir, ".claude", "skills", "adr-review", "SKILL.md")
-	_, err = os.Stat(adrReviewSkillPath)
-	assert.True(t, os.IsNotExist(err))
-}
-
-func TestInit_StillWorksWithoutSkill(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	err := Init(tmpDir)
-	require.NoError(t, err)
-
-	adrDir := filepath.Join(tmpDir, ".adr-buddy")
-	_, err = os.Stat(adrDir)
-	require.NoError(t, err)
 }

@@ -22,16 +22,17 @@ Before starting:
 
 1. Verify adr-buddy is initialized:
    ```bash
-   test -f .adr-buddy/config.yml && echo "Ready" || echo "Run: adr-buddy init"
+   test -d .claude/rules/decisions && echo "Ready" || echo "Run: adr-buddy init"
    ```
 
-2. Read `.adr-buddy/config.yml` to find:
-   - `output_dir` - where ADR files are stored
-   - `scan_paths` - directories to analyze
+2. **Read `.adr-buddy/template.md`** — this is the authoritative template for ADR structure. You MUST use the exact sections and placeholders defined in the template when drafting ADRs. If the user has customized it (added sections, changed fields), follow their template exactly.
 
-3. Find the next available ADR ID:
+3. Read `.adr-buddy/config.yml` to find:
+   - `decisions_dir` - where ADR files are stored
+
+4. Check existing ADRs:
    ```bash
-   ls -1 decisions/ 2>/dev/null | grep -E '^adr-[0-9]+' | sort -V | tail -1
+   adr-buddy list
    ```
 
 ## Step 1: Choose Analysis Depth
@@ -84,6 +85,52 @@ Scan these files to discover technology choices:
 - Source file where found
 - Usage context (e.g., "docker-compose service" or "direct dependency")
 
+**Version Analysis:**
+
+After discovering technologies, scan for version choices that should be documented as decisions. These are often implicit decisions that deserve explicit documentation.
+
+*What to scan:*
+
+| Source | What to look for | How to detect |
+|--------|-----------------|---------------|
+| `Dockerfile` | Base image versions (`FROM node:18`, `FROM eclipse-temurin:17`) | `grep -E "^FROM " Dockerfile` |
+| `docker-compose.yml` | Service image tags (`postgres:15`, `redis:latest`) | `grep "image:" docker-compose.yml` |
+| `.github/workflows/*.yml` | Runtime versions (`java-version: '17'`, `node-version: '18'`) | `grep -E "(java|node|python|go)-version" .github/workflows/*.yml` |
+| `go.mod` | Go version (`go 1.21`) | `grep "^go " go.mod` |
+| `package.json` | Node engine constraint (`"engines": {"node": ">=18"}`) | Read `engines` field |
+| `pom.xml` / `build.gradle` | JVM target version, source compatibility | `grep -E "source|target|java.version" pom.xml build.gradle*` |
+| `.tool-versions` | Runtime versions (asdf) | `cat .tool-versions` |
+| `.node-version` / `.python-version` / `.java-version` | Pinned runtime versions | Read file contents |
+| `tsconfig.json` | TypeScript target (`"target": "ES2022"`) | Read `compilerOptions.target` |
+
+*Flag these version issues:*
+
+| Issue | Example | Recommendation |
+|-------|---------|----------------|
+| `:latest` tags | `postgres:latest`, `node:latest` | Pin to specific version for reproducibility |
+| Non-LTS runtime versions | JVM 17 (LTS: 21), Node 18 (LTS: 22) | Document why not on current LTS, or plan upgrade |
+| End-of-life versions | Python 3.8, Node 16, JVM 11 | Flag as deprecated, recommend upgrade path |
+| Unpinned minor versions | `FROM node:22` vs `FROM node:22.11` | Consider pinning for reproducible builds |
+| Pre-release / RC versions | `go 1.24rc1`, `python:3.13-rc` | Document why using pre-release |
+
+*Current LTS versions to check against (web search to confirm):*
+
+| Runtime | Current LTS | Previous LTS | EOL soon |
+|---------|-------------|--------------|----------|
+| **JVM** | 21 | 17 (until 2026-09) | 11 (EOL) |
+| **Node.js** | 22 | 20 (until 2026-04) | 18 (EOL 2025-04) |
+| **Python** | 3.12 / 3.13 | 3.11 | 3.9 (EOL 2025-10) |
+| **Go** | 1.23 / 1.24 | — | 1.21 (EOL) |
+| **.NET** | 9.0 | 8.0 (LTS until 2026-11) | 6.0 (EOL) |
+
+**IMPORTANT:** Always web search "[runtime] LTS schedule [current year]" to confirm — these dates shift. Do NOT rely on the table above as the source of truth.
+
+*For each version issue, record:*
+- Technology and current version
+- Source file where found
+- Issue type (`:latest`, non-LTS, EOL, unpinned)
+- Current LTS version (from web search)
+
 ### Level 2: Structural Patterns
 
 In addition to Level 1, analyze folder structure for architectural patterns:
@@ -125,19 +172,6 @@ In addition to Levels 1-2, analyze code for design patterns:
 | Observer/Pub-Sub | Search for Subscribe/Publish patterns | `Subscribe\(`, `Publish\(`, `EventEmitter` |
 | Middleware Chain | Search for middleware patterns | `func.*Middleware`, `app.use\(` |
 
-**Detection Commands:**
-
-```bash
-# Repository pattern (Go)
-grep -r "Repository interface" --include="*.go" | head -5
-
-# Dependency injection (constructor with interface params)
-grep -rn "func New" --include="*.go" | grep -E "\(.*[A-Z][a-z]+er\)" | head -5
-
-# Middleware (various languages)
-grep -rn "middleware\|Middleware" --include="*.go" --include="*.ts" --include="*.js" | head -5
-```
-
 **For each detected pattern, record:**
 - Pattern name
 - Example file and line
@@ -155,6 +189,10 @@ Dependencies ([count])
  - [name] ([category])
  - ...
 
+Version Issues ([count])
+ - [technology] [current version] — [issue type]: [recommendation]
+ - ...
+
 Structural Patterns ([count])  [only if Level 2+]
  - [pattern name] ([evidence folders])
  - ...
@@ -166,154 +204,133 @@ Code Patterns ([count])  [only if Level 3]
 Already documented: [N] decisions ([list IDs])
 ```
 
+**Version issues example:**
+
+```
+Version Issues (3)
+ - postgres:latest in docker-compose.yml — :latest tag: pin to postgres:16
+ - JVM 17 in Dockerfile — non-LTS: current LTS is 21
+ - Node 18 in .github/workflows/ci.yml — EOL: reached end-of-life April 2025
+```
+
 **Filtering:**
-- Check existing `@decision.id` annotations in codebase
-- Check existing ADR files in output directory
+- Check existing ADR files in decisions directory
 - Mark already-documented items and exclude from count
 
 **Then ask:**
-"Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies'."
+"Which would you like to document? You can say 'all', list numbers, or pick a category like 'just the dependencies' or 'just the version issues'."
 
-## Step 4: Research Alternatives
+## Step 4: Draft ADRs
 
-For each selected decision, research alternatives and considerations before asking the user.
+For each selected decision, **you** research and write a complete draft ADR. Do NOT ask open-ended questions. Instead, do the work and present a finished draft for approval.
 
-**Research Process:**
+### 4.1 Research (you do this silently)
 
-1. **Identify the category** - What problem does this technology solve?
-2. **Web search for alternatives** - Search: "[technology] alternatives [year]"
-3. **Gather selection criteria** - What factors matter when choosing in this category?
-4. **Summarize findings** - Present 3-5 alternatives with key differentiators
+For each decision:
 
-**Research Prompt Template:**
+1. **Web search** for "[technology] vs alternatives [year]" to find current alternatives
+2. **Analyze the codebase** for how the technology is used, configured, and integrated
+3. **Infer the context** from the project structure, config files, and usage patterns
 
-```
-I'll document your choice of [TECHNOLOGY] for [CATEGORY].
+Use what you find to write the draft. Do NOT ask the user "why did you choose X?" — infer it from evidence and let them correct you.
 
-I've researched alternatives and considerations:
+### 4.2 Write a Complete Draft
 
-**Alternatives:**
-- [Alt 1] - [Key differentiator, trade-off]
-- [Alt 2] - [Key differentiator, trade-off]
-- [Alt 3] - [Key differentiator, trade-off]
+**IMPORTANT:** Use the sections from `.adr-buddy/template.md` as the structure. The example below shows the default sections — if the user's template has different or additional sections, follow theirs instead.
 
-**Key considerations for [CATEGORY] selection:**
-- [Factor 1]
-- [Factor 2]
-- [Factor 3]
-```
+For each decision, write a full ADR draft with all sections filled in:
 
-**Research Scope:**
-- For common technologies: Use knowledge + brief web search to confirm current status
-- For obscure/newer tools: More thorough web search for alternatives and community status
+```markdown
+---
+adr_id: adr-[NEXT_ID]
+name: [Short title]
+status: accepted
+category: [category]
+date: "[YYYY-MM-DD]"
+globs:
+    - "[relevant file patterns based on where technology is used]"
+---
 
-## Step 5: Guided Documentation Conversation
+# ADR-[NEXT_ID]: [Short title]
 
-For each selected decision, follow this conversation flow:
+## Context
 
-### 5.1 Present Research (from Step 4)
+[Write 2-4 sentences based on what you found in the codebase.
+What problem does this solve? What requirements drove this choice?
+Infer from usage patterns, config, and project structure.]
 
-Show the alternatives and considerations you researched.
+## Decision
 
-### 5.2 Ask "Why"
+[Write 1-3 sentences. What was chosen and how is it configured?
+Be specific — reference actual config values, versions, or patterns
+you found in the codebase.]
 
-```
-Why did you choose [TECHNOLOGY] for this project?
-```
+## Alternatives Considered
 
-Wait for response. This becomes the core of `@decision.context` and `@decision.decision`.
+- **[Alt 1]:** [Why it's a reasonable alternative, why not chosen — infer from project context]
+- **[Alt 2]:** [Same]
+- **[Alt 3]:** [Same]
 
-### 5.3 Explore Constraints
+## Consequences
 
-```
-What constraints or factors influenced this decision?
-(e.g., team expertise, performance requirements, existing infrastructure, cost, timeline)
-```
+**Positive:** [Infer from how it's used — what does it enable?]
+**Negative:** [Infer from common trade-offs for this technology]
 
-Wait for response. This enriches `@decision.context`.
+## References
 
-### 5.4 Capture Trade-offs
-
-```
-Any trade-offs or concerns you're aware of with this choice?
-```
-
-Wait for response. This becomes `@decision.consequences`.
-
-### 5.5 Confirm Alternatives
-
-```
-From the alternatives I listed, were any of these seriously considered?
-[List the alternatives you researched]
+- `path/to/file.go` — [What this file does in relation to the decision]
+- `path/to/config.yaml` — [Configuration for this technology]
+- `path/to/other.go` — [Other affected code]
 ```
 
-Wait for response. This becomes `@decision.alternatives`.
+**References section:** List every file where the technology is used, configured, or imported. Include a short description of what each file does in relation to the decision. Search the codebase for imports, config references, and usage to build this list — don't guess.
 
-### 5.6 Draft Annotation
+### 4.3 Present for Review
 
-Synthesize all responses into a draft annotation:
+Present the draft and ask ONE structured question:
 
 ```
-Here's the ADR annotation I'll add:
+Here's the draft ADR for [TECHNOLOGY]:
 
-// @decision.id: adr-[NEXT_ID]
-// @decision.name: [Short title from technology + category]
-// @decision.status: accepted
-// @decision.context: [Synthesized from user's "why" and constraints]
-// @decision.decision: [What was chosen and key configuration]
-// @decision.alternatives:
-//   - [Alt 1]: [Why not chosen]
-//   - [Alt 2]: [Why not chosen]
-// @decision.consequences: [From trade-offs discussion]
+[Show full draft]
 
-Does this look right? Any changes?
+What would you like to change?
+1. Looks good — create it
+2. Edit context/reasoning (I'll explain what to change)
+3. Different alternatives were considered
+4. Skip this one
 ```
 
-Wait for confirmation before proceeding.
+**IMPORTANT:** Always present a complete, ready-to-save draft. Never present a skeleton with `[fill in]` placeholders. The user should only need to approve or make small corrections.
 
-## Step 6: Add Annotations
+### 4.4 Apply Corrections
 
-### Placement Rules
+If the user picks option 2 or 3:
+- Apply their feedback to the draft
+- Show the updated version
+- Ask again: "Updated. Ready to create, or more changes?"
 
-Add annotations at the most relevant location for each decision type:
+Limit to 2 revision rounds. If still not right after 2 rounds, create the file and let the user edit it directly.
 
-| Decision Type | Placement Strategy |
-|---------------|-------------------|
-| Database dependency | Connection/client initialization file |
-| Cache dependency | Cache client setup file |
-| Web framework | Main app entry point (main.go, app.ts, etc.) |
-| Library dependency | First significant import/usage |
-| Structural pattern | First file in the pattern (e.g., first service in /services) |
-| Code pattern | Primary example of the pattern |
+## Step 5: Create ADR Files
 
-### Finding Placement Location
+For each approved decision:
+
+1. Create the file:
+   ```bash
+   adr-buddy new "[Decision title]" --category [category]
+   ```
+
+2. Replace the generated template content with the approved draft content by editing the file directly.
+
+3. Move to the next decision immediately — don't wait for additional confirmation.
+
+## Step 6: Check for Duplicates
+
+Before creating each ADR, check for existing ADRs on the same topic:
 
 ```bash
-# For a dependency, find where it's imported/used
-grep -rn "import.*[package]" --include="*.go" --include="*.ts" --include="*.js" | head -3
-
-# For docker-compose services, the annotation goes in the connection code
-grep -rn "postgres\|redis\|mongo" --include="*.go" --include="*.ts" | head -3
-```
-
-### Adding the Annotation
-
-Use the Edit tool to add the annotation comment block directly above the relevant code (import statement, function definition, or configuration).
-
-**Comment Style:**
-- Go, JS, TS, Java, C, Rust: `//`
-- Python, Ruby, YAML, Shell: `#`
-
-## Step 7: Check for Duplicates
-
-Before adding each annotation, check for existing ADRs on the same topic:
-
-```bash
-# Search existing annotations
-grep -r "@decision" --include="*.go" --include="*.ts" --include="*.js" --include="*.py" | grep -i "[TECHNOLOGY]"
-
-# Search existing ADR files
-ls decisions/ 2>/dev/null | xargs -I {} grep -l "[TECHNOLOGY]" decisions/{} 2>/dev/null
+adr-buddy list | grep -i "[TECHNOLOGY]"
 ```
 
 **If duplicate found:**
@@ -327,28 +344,25 @@ Options:
 3. Create new - this is a different aspect of the same technology
 ```
 
-## Step 8: Sync and Complete
+## Step 7: Sync and Complete
 
 After all selected decisions are documented:
 
 ```bash
-# Validate annotations
+# Validate ADR files
 adr-buddy check
 
-# Generate/update ADR files
+# Regenerate the decisions index
 adr-buddy sync
 ```
 
 **Report completion:**
 ```
-Added [N] new decision annotations
+Created [N] new ADR files:
 
-Running `adr-buddy sync`...
-
-Generated:
-- decisions/adr-[ID].md ([Title])
-- decisions/adr-[ID].md ([Title])
+- .claude/rules/decisions/adr-[ID]-[name].md ([Title])
+- .claude/rules/decisions/adr-[ID]-[name].md ([Title])
 ...
 
-All decisions documented! The ADR files are ready for commit.
+Index updated. All decisions documented and ready for commit.
 ```

@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package cli
 
@@ -12,102 +11,54 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/weaby/adr-buddy/internal/model"
 )
 
-func TestIntegration_ValidateAndSyncWorkflow(t *testing.T) {
+func TestIntegration_FullWorkflow(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Initialize project
+	// Step 1: Init
 	err := Init(tmpDir)
 	require.NoError(t, err)
 
-	// Create source file with annotations
-	srcDir := filepath.Join(tmpDir, "src")
-	require.NoError(t, os.MkdirAll(srcDir, 0755))
+	// Decisions directory should exist
+	decisionsDir := filepath.Join(tmpDir, ".claude", "rules", "decisions")
+	_, err = os.Stat(decisionsDir)
+	require.NoError(t, err)
 
-	sourceFile := filepath.Join(srcDir, "logger.js")
-	sourceContent := `// @decision.id: adr-1
-// @decision.name: Using Pino for logging
-// @decision.status: accepted
-// @decision.context: We needed structured logging
-// @decision.decision: Use Pino as logging library
-// @decision.consequences: Better performance
-const pino = require('pino');
-`
-	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
+	// Step 2: Create a new ADR
+	err = NewCommand(tmpDir, "Use PostgreSQL", "infrastructure")
+	require.NoError(t, err)
 
-	// Update config to scan src directory
-	configFile := filepath.Join(tmpDir, ".adr-buddy", "config.yml")
-	configContent := `scan_paths:
-  - ./src
-output_dir: ./decisions
-exclude:
-  - "**/node_modules/**"
-`
-	require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0644))
-
-	// Run check with JSON output
+	// Step 3: Check passes
 	var checkBuf bytes.Buffer
 	err = CheckWithFormat(tmpDir, false, "json", &checkBuf)
 	require.NoError(t, err)
 
-	var checkResult model.CheckResult
+	var checkResult CheckResult
 	err = json.Unmarshal(checkBuf.Bytes(), &checkResult)
 	require.NoError(t, err)
 	assert.Equal(t, "pass", checkResult.Status)
-	assert.Equal(t, 1, checkResult.Summary.TotalAnnotations)
-	assert.Equal(t, 1, checkResult.Summary.ValidAnnotations)
+	assert.Equal(t, 1, checkResult.Summary.TotalADRs)
 
-	// Run sync dry-run with JSON output
+	// Step 4: List shows the ADR
+	var listBuf bytes.Buffer
+	err = ListCommand(tmpDir, "", &listBuf)
+	require.NoError(t, err)
+	assert.Contains(t, listBuf.String(), "Use PostgreSQL")
+
+	// Step 5: Sync regenerates index
 	var syncBuf bytes.Buffer
-	err = SyncWithFormat(tmpDir, true, "json", &syncBuf)
+	err = SyncWithFormat(tmpDir, false, "json", &syncBuf)
 	require.NoError(t, err)
 
-	var syncResult model.SyncResult
+	var syncResult SyncResult
 	err = json.Unmarshal(syncBuf.Bytes(), &syncResult)
 	require.NoError(t, err)
-	assert.True(t, syncResult.ChangesDetected)
-	assert.Equal(t, 1, len(syncResult.Files.Created))
-	assert.Contains(t, syncResult.Files.Created[0], "adr-1.md")
+	assert.True(t, syncResult.IndexUpdated)
+	assert.Equal(t, 1, syncResult.ADRCount)
 
-	// Run actual sync
-	var actualSyncBuf bytes.Buffer
-	err = SyncWithFormat(tmpDir, false, "text", &actualSyncBuf)
+	// Verify index contains the ADR
+	indexContent, err := os.ReadFile(filepath.Join(decisionsDir, "decisions-index.md"))
 	require.NoError(t, err)
-
-	// Verify ADR file was created
-	adrFile := filepath.Join(tmpDir, "decisions", "adr-1.md")
-	assert.FileExists(t, adrFile)
-
-	content, err := os.ReadFile(adrFile)
-	require.NoError(t, err)
-	assert.Contains(t, string(content), "Using Pino for logging")
-	assert.Contains(t, string(content), "**Status:** accepted")
-}
-
-func TestIntegration_CheckValidationErrors(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Initialize
-	err := Init(tmpDir)
-	require.NoError(t, err)
-
-	// Create source with invalid annotation (missing name)
-	sourceFile := filepath.Join(tmpDir, "test.js")
-	sourceContent := `// @decision.id: adr-1
-const x = 1;`
-	require.NoError(t, os.WriteFile(sourceFile, []byte(sourceContent), 0644))
-
-	// Run check with JSON
-	var buf bytes.Buffer
-	err = CheckWithFormat(tmpDir, false, "json", &buf)
-	require.Error(t, err) // Should fail validation
-
-	var result model.CheckResult
-	err = json.Unmarshal(buf.Bytes(), &result)
-	require.NoError(t, err)
-	assert.Equal(t, "fail", result.Status)
-	assert.Greater(t, result.Summary.ErrorCount, 0)
-	assert.Contains(t, result.Errors[0].Message, "@decision.name")
+	assert.Contains(t, string(indexContent), "Use PostgreSQL")
 }

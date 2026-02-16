@@ -20,7 +20,7 @@ func TestInstallProjectLevel(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, string(content), "name: adr")
-	assert.Contains(t, string(content), "@decision.id")
+	assert.Contains(t, string(content), "adr_id")
 }
 
 func TestInstallUserLevel(t *testing.T) {
@@ -64,14 +64,14 @@ func TestExists_UserLevel(t *testing.T) {
 	assert.True(t, ExistsUserLevel())
 }
 
-func TestInstallProjectLevel_Idempotent(t *testing.T) {
+func TestInstallProjectLevel_OverwritesExisting(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	err := InstallProjectLevel(tmpDir)
 	require.NoError(t, err)
 
 	skillPath := filepath.Join(tmpDir, ".claude", "skills", "adr", "SKILL.md")
-	err = os.WriteFile(skillPath, []byte("custom content"), 0644)
+	err = os.WriteFile(skillPath, []byte("old content"), 0644)
 	require.NoError(t, err)
 
 	err = InstallProjectLevel(tmpDir)
@@ -79,5 +79,6 @@ func TestInstallProjectLevel_Idempotent(t *testing.T) {
 
 	content, err := os.ReadFile(skillPath)
 	require.NoError(t, err)
-	assert.Equal(t, "custom content", string(content))
+	assert.Contains(t, string(content), "name: adr")
+	assert.NotEqual(t, "old content", string(content))
 }

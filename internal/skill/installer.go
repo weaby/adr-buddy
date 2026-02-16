@@ -21,10 +21,6 @@ func InstallUserLevel() error {
 }
 
 func install(skillFilePath string) error {
-	if _, err := os.Stat(skillFilePath); err == nil {
-		return nil
-	}
-
 	skillDir := filepath.Dir(skillFilePath)
 	if err := os.MkdirAll(skillDir, 0755); err != nil {
 		return fmt.Errorf("failed to create skill directory: %w", err)
@@ -74,10 +70,6 @@ func InstallAdrReviewUserLevel() error {
 }
 
 func installAdrReview(skillFilePath string) error {
-	if _, err := os.Stat(skillFilePath); err == nil {
-		return nil
-	}
-
 	skillDir := filepath.Dir(skillFilePath)
 	if err := os.MkdirAll(skillDir, 0755); err != nil {
 		return fmt.Errorf("failed to create skill directory: %w", err)

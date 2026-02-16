@@ -7,9 +7,9 @@ description: Automatically document architectural decisions when coding
 
 **You MUST use this skill automatically whenever you make architectural decisions while coding.** Do not wait for the user to ask — document decisions as you make them.
 
-## When to Add Decision Annotations
+## When to Create an ADR
 
-Add a `@decision` annotation whenever you:
+Create an ADR whenever you:
 
 | Trigger | Examples |
 |---------|----------|
@@ -20,7 +20,7 @@ Add a `@decision` annotation whenever you:
 | **Structure code significantly** | Module boundaries, API design, data models |
 | **Pick between alternatives** | Any time you consider multiple options |
 
-**Rule of thumb:** If a future developer would ask "why is this like this?" — add an annotation.
+**Rule of thumb:** If a future developer would ask "why is this like this?" — create an ADR.
 
 ## Automatic Behavior
 
@@ -28,181 +28,178 @@ When you write code that involves a decision:
 
 1. **Pause and acknowledge:** "This is an architectural decision. Let me document it."
 2. **State alternatives you considered**
-3. **Add the annotation to the code**
+3. **Create the ADR file**
 4. **List all files affected by this decision**
 
 Do NOT skip this step. Do NOT wait to be asked.
 
-## Before Creating Annotations
+## Before Creating ADRs
 
-1. Check `.adr-buddy/config.yml` for:
-   - `output_dir` - where ADR files are stored
-   - `template` - path to custom template (defaults to `internal/template/default.go`)
+1. **Read `.adr-buddy/template.md`** — this is the authoritative template for ADR structure. The user may have customized sections, added fields, or changed placeholders. You MUST follow it exactly when filling in ADR content. If the template has custom sections (e.g., "Locations", "Impact"), fill those in too.
 
-2. The ADR template format is defined in `internal/template/default.go`. This is the authoritative source for how ADRs are rendered.
+2. Check `.adr-buddy/config.yml` for:
+   - `decisions_dir` - where ADR files are stored (default: `.claude/rules/decisions`)
 
-3. Scan the output directory to find the highest existing ADR ID:
+3. Check existing decisions to find the next ID and avoid duplicates:
    ```bash
-   ls -1 decisions/ | grep -E '^adr-[0-9]+' | sort -V | tail -1
+   adr-buddy list
    ```
-   Then use the next number.
 
-4. Check for existing decisions on the same topic to avoid duplicates or conflicts.
+## ADR File Format
 
-## Annotation Syntax
+ADRs are markdown files with YAML frontmatter, stored in `.claude/rules/decisions/`.
 
-Place annotations in code comments. Use `//` for Go/JS/TS/Java/C/Rust or `#` for Python/Ruby/YAML/Shell.
+### Frontmatter Fields
 
-### Required Fields
+| Field | Required | Description |
+|-------|----------|-------------|
+| `adr_id` | Yes | Unique identifier (e.g., "adr-001") |
+| `name` | Yes | Short title (under 60 chars) |
+| `status` | No | proposed, accepted, rejected, deprecated, superseded (default: proposed) |
+| `category` | No | infrastructure, data, security, architecture, etc. |
+| `date` | No | Date in YYYY-MM-DD format (auto-set) |
+| `globs` | No | File patterns this decision applies to (e.g., `["internal/database/**"]`) |
 
-| Field | Description |
-|-------|-------------|
-| `@decision.id` | Unique identifier (e.g., "adr-001") |
-| `@decision.name` | Short title (under 60 chars) |
-| `@decision.context` | WHY this decision was needed |
-| `@decision.decision` | WHAT was decided |
+### Markdown Sections
 
-### Recommended Fields
+| Section | Description |
+|---------|-------------|
+| **Context** | WHY this decision was needed |
+| **Decision** | WHAT was decided |
+| **Alternatives Considered** | Other options and why they were rejected |
+| **Consequences** | Trade-offs, what becomes easier/harder |
+| **References** | Affected files and relevant code locations |
 
-| Field | Description |
-|-------|-------------|
-| `@decision.alternatives` | Other options considered and why rejected |
-| `@decision.consequences` | Trade-offs, what becomes easier/harder |
-| `@decision.refs` | Other files affected by this decision |
+**Note:** The template in `.adr-buddy/template.md` may define additional or different sections. Always follow the template.
 
-### Optional Fields
+## Creating an ADR
 
-| Field | Description |
-|-------|-------------|
-| `@decision.status` | proposed, accepted, rejected, deprecated, superseded (default: accepted) |
-| `@decision.category` | infrastructure, data, security, architecture, etc. |
-| `@decision.supersedes` | ID of decision this replaces (e.g., "adr-002") |
+Use `adr-buddy new` to create an ADR with the next available ID:
 
-### Multi-line Values
-
-Continue on the next line with indentation:
-
-```go
-// @decision.context: We needed a message queue that supports
-//   replay capability for debugging payment failures and allows
-//   multiple consumers to receive the same events.
+```bash
+adr-buddy new "Use Kafka for payment events" --category infrastructure
 ```
 
-### Listing Alternatives
-
-```go
-// @decision.alternatives:
-//   - SQS: Simpler but no replay capability, harder multi-consumer
-//   - RabbitMQ: Good but less ecosystem support for our Go stack
-//   - Redis Streams: Considered but persistence guarantees unclear
-```
-
-### Listing Affected Files
-
-```go
-// @decision.refs:
-//   - internal/payments/publisher.go
-//   - internal/payments/consumer.go
-//   - config/kafka.yaml
-//   - docker-compose.yml
-```
+This creates a file like `.claude/rules/decisions/adr-003-use-kafka-for-payment-events.md` with the template structure. Then fill in the sections.
 
 ## Complete Example
 
-```go
-// @decision.id: adr-003
-// @decision.name: Use Kafka for payment events
-// @decision.status: accepted
-// @decision.category: infrastructure
-// @decision.context: We need to publish payment events to multiple
-//   consumers (analytics, fraud detection, notifications). Events
-//   must be replayable for debugging failed payments.
-// @decision.decision: Use Apache Kafka over SQS or RabbitMQ.
-//   Configure with 3 partitions and 7-day retention.
-// @decision.alternatives:
-//   - SQS: Simpler, but no replay and complex multi-consumer setup
-//   - RabbitMQ: Good features but team lacks expertise
-//   - Redis Streams: Insufficient durability guarantees for payments
-// @decision.consequences: Requires Kafka expertise on team. Adds
-//   operational complexity. Enables event replay and multi-consumer
-//   patterns. 7-day retention allows debugging historical issues.
-// @decision.refs:
-//   - internal/payments/event_publisher.go
-//   - internal/payments/event_consumer.go
-//   - internal/analytics/payment_listener.go
-//   - deployments/kafka.yaml
-func NewPaymentEventPublisher(kafka *kafka.Producer) *PaymentEventPublisher {
+```markdown
+---
+adr_id: adr-003
+name: Use Kafka for payment events
+status: accepted
+category: infrastructure
+date: "2024-06-15"
+globs:
+    - "internal/payments/**"
+    - "deployments/kafka.yaml"
+---
+
+# ADR-003: Use Kafka for payment events
+
+## Context
+
+We need to publish payment events to multiple consumers (analytics, fraud
+detection, notifications). Events must be replayable for debugging failed
+payments.
+
+## Decision
+
+Use Apache Kafka over SQS or RabbitMQ. Configure with 3 partitions and
+7-day retention.
+
+## Alternatives Considered
+
+- **SQS:** Simpler, but no replay and complex multi-consumer setup
+- **RabbitMQ:** Good features but team lacks expertise
+- **Redis Streams:** Insufficient durability guarantees for payments
+
+## Consequences
+
+**Positive:** Enables event replay and multi-consumer patterns. 7-day
+retention allows debugging historical issues.
+**Negative:** Requires Kafka expertise on team. Adds operational complexity.
+
+## References
+
+- `internal/payments/event_publisher.go` — Kafka producer setup
+- `internal/payments/event_consumer.go` — Consumer group configuration
+- `internal/analytics/payment_listener.go` — Analytics consumer
+- `deployments/kafka.yaml` — Kafka cluster configuration
+- `docker-compose.yml` — Local Kafka service definition
 ```
 
-## Good vs Bad Annotations
+## Good vs Bad ADRs
 
-### ✅ Good: Explains WHY with alternatives
+### Good: Explains WHY with alternatives
 
-```go
-// @decision.id: adr-007
-// @decision.name: 5 retries with exponential backoff for payments
-// @decision.context: Payment gateway has occasional timeouts.
-//   Need retry logic that handles transient failures without
-//   overwhelming the gateway during outages.
-// @decision.decision: 5 retries with exponential backoff (1s, 2s,
-//   4s, 8s, 16s). Payments are idempotent via payment_id.
-// @decision.alternatives:
-//   - Fixed delay: Simpler but can cause thundering herd
-//   - 3 retries: Insufficient for p99 recovery based on metrics
-//   - Circuit breaker only: Doesn't handle single-request failures
-// @decision.consequences: Max 31s latency for retried requests.
-//   Safe because payment_id ensures idempotency.
+```markdown
+## Context
+
+Payment gateway has occasional timeouts. Need retry logic that handles
+transient failures without overwhelming the gateway during outages.
+
+## Decision
+
+5 retries with exponential backoff (1s, 2s, 4s, 8s, 16s). Payments are
+idempotent via payment_id.
+
+## Alternatives Considered
+
+- **Fixed delay:** Simpler but can cause thundering herd
+- **3 retries:** Insufficient for p99 recovery based on metrics
+- **Circuit breaker only:** Doesn't handle single-request failures
+
+## Consequences
+
+**Positive:** Safe because payment_id ensures idempotency.
+**Negative:** Max 31s latency for retried requests.
 ```
 
-### ❌ Bad: No context, no alternatives
+### Bad: No context, no alternatives
 
-```go
-// @decision.id: adr-007
-// @decision.name: Use retries
-// @decision.decision: Retry 5 times
+```markdown
+## Decision
+
+Retry 5 times
 ```
 
-### ❌ Bad: States WHAT but not WHY
+### Bad: States WHAT but not WHY
 
-```go
-// @decision.id: adr-007
-// @decision.name: Use Kafka
-// @decision.decision: We are using Kafka for events
+```markdown
+## Decision
+
+We are using Kafka for events
 ```
 
-## When NOT to Add Annotations
+## When NOT to Create ADRs
 
-Skip annotations for:
+Skip ADRs for:
 - Trivial implementation details (loop styles, variable names)
 - Standard library usage with no alternatives
 - Obvious choices anyone would make
 - Temporary or experimental code
 
-## Checking Existing Decisions
+## Using Globs
 
-Before making a decision in an area with existing ADRs:
+Use the `globs` field to scope an ADR to specific files. Claude Code will load these decisions automatically when working in matching paths.
 
-```bash
-# Search for related decisions
-adr-buddy list | grep -i "kafka\|queue\|messaging"
-
-# Or search annotations in code
-grep -r "@decision" --include="*.go" | grep -i "kafka"
+```yaml
+globs:
+    - "internal/database/**"
+    - "migrations/**"
 ```
 
-If a relevant decision exists:
-- **Follow it** if still applicable
-- **Supersede it** if requirements changed (add `@decision.supersedes: adr-XXX`)
+## After Creating ADRs
 
-## After Adding Annotations
-
-Remind the user to sync:
+Sync the index:
 
 ```bash
-# Validate annotations
+# Validate ADR files
 adr-buddy check
 
-# Generate/update ADR files
+# Regenerate the decisions index
 adr-buddy sync
 
 # View all decisions
@@ -225,6 +222,6 @@ adr-buddy list
 >
 > I'll go with **Redis** because we need cache sharing across multiple API instances and may want to use it for sessions later.
 >
-> Let me add the annotation and implement it."
+> Let me create the ADR and implement it."
 
-Then add the annotation with full context, alternatives, and refs.
+Then create the ADR file with full context, alternatives, and consequences.

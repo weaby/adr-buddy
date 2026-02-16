@@ -3,27 +3,62 @@ package main
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExitCodes(t *testing.T) {
 	// Build the binary
-	cmd := exec.Command("go", "build", "-o", "/tmp/adr-buddy-test", ".")
-	err := cmd.Run()
-	assert.NoError(t, err)
-	defer os.Remove("/tmp/adr-buddy-test")
+	tmpBin := filepath.Join(t.TempDir(), "adr-buddy")
+	build := exec.Command("go", "build", "-o", tmpBin, ".")
+	build.Dir = "."
+	out, err := build.CombinedOutput()
+	require.NoError(t, err, "build failed: %s", string(out))
 
-	// Test successful check - exit 0
-	tmpDir := t.TempDir()
-	os.WriteFile(tmpDir+"/.adr-buddy/config.yml", []byte("scan_paths: [.]"), 0644)
+	t.Run("check succeeds with no ADRs", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cmd := exec.Command(tmpBin, "check")
+		cmd.Dir = tmpDir
+		err := cmd.Run()
+		require.NoError(t, err)
+	})
 
-	cmd = exec.Command("/tmp/adr-buddy-test", "check")
-	cmd.Dir = tmpDir
-	err = cmd.Run()
-	assert.NoError(t, err) // Exit code 0
+	t.Run("list succeeds with no ADRs", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cmd := exec.Command(tmpBin, "list")
+		cmd.Dir = tmpDir
+		err := cmd.Run()
+		require.NoError(t, err)
+	})
 
-	// Test failed check - exit 1
-	// (would need invalid annotations to test)
+	t.Run("new requires name argument", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cmd := exec.Command(tmpBin, "new")
+		cmd.Dir = tmpDir
+		err := cmd.Run()
+		require.Error(t, err) // Should fail without args
+	})
+}
+
+func TestExitCodes_Init(t *testing.T) {
+	// Build the binary
+	tmpBin := filepath.Join(t.TempDir(), "adr-buddy")
+	build := exec.Command("go", "build", "-o", tmpBin, ".")
+	build.Dir = "."
+	out, err := build.CombinedOutput()
+	require.NoError(t, err, "build failed: %s", string(out))
+
+	t.Run("init with skip creates decisions dir", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cmd := exec.Command(tmpBin, "init", "--claude-skill", "skip")
+		cmd.Dir = tmpDir
+		err := cmd.Run()
+		require.NoError(t, err)
+
+		decisionsDir := filepath.Join(tmpDir, ".claude", "rules", "decisions")
+		_, err = os.Stat(decisionsDir)
+		require.NoError(t, err)
+	})
 }
